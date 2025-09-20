@@ -25,7 +25,7 @@ interface BackTranslationResult {
 export function HealthcareTranslator() {
   // Workflow state
   const [currentStep, setCurrentStep] = useState(1);
-  const steps = ["Input", "Translation", "Quality Check", "Audio"];
+  const steps = ["Input & Translation", "Quality Check", "Audio"];
 
   // todo: remove mock functionality
   // Patient presets
@@ -108,9 +108,11 @@ export function HealthcareTranslator() {
       };
 
       setTranslationResult(result);
-      setCurrentStep(2);
       setIsTranslating(false);
       console.log('Translation completed:', result);
+      
+      // Automatically trigger back-translation
+      handleBackTranslate(result);
     }, 2000);
   };
 
@@ -124,11 +126,12 @@ export function HealthcareTranslator() {
     }
   };
 
-  const handleBackTranslate = async () => {
-    if (!translationResult) return;
+  const handleBackTranslate = async (translationData?: TranslationResult) => {
+    const dataToUse = translationData || translationResult;
+    if (!dataToUse) return;
     
     setIsBackTranslating(true);
-    console.log('Starting back-translation...');
+    console.log('Starting automatic back-translation...');
     
     // todo: remove mock functionality
     // Simulate back-translation
@@ -139,7 +142,7 @@ export function HealthcareTranslator() {
       };
 
       setBackTranslationResult(result);
-      setCurrentStep(3);
+      setCurrentStep(2);
       setIsBackTranslating(false);
       console.log('Back-translation completed:', result);
     }, 2500);
@@ -153,15 +156,16 @@ export function HealthcareTranslator() {
     // Simulate audio generation
     setTimeout(() => {
       setAudioUrl("mock-audio-url");
-      setCurrentStep(4);
+      setCurrentStep(3);
       setIsGeneratingAudio(false);
       console.log('Audio generation completed');
     }, 3000);
   };
 
   const handleRejectTranslation = () => {
-    console.log('Translation rejected, returning to translation step');
-    setCurrentStep(2);
+    console.log('Translation rejected, returning to input step');
+    setCurrentStep(1);
+    setTranslationResult(null);
     setBackTranslationResult(null);
   };
 
@@ -202,7 +206,7 @@ export function HealthcareTranslator() {
         <StepIndicator currentStep={currentStep} steps={steps} />
 
         <div className="max-w-4xl mx-auto space-y-6">
-          {/* Step 1: Input */}
+          {/* Step 1: Input & Translation */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <PatientPresetSelector
@@ -220,24 +224,24 @@ export function HealthcareTranslator() {
                 onTranslate={handleTranslate}
                 isTranslating={isTranslating}
               />
+
+              {/* Show translation result immediately when available */}
+              {translationResult && (
+                <TranslationCard
+                  original={translationResult.original}
+                  translation={translationResult.translation}
+                  language={translationResult.language}
+                  reasoning={translationResult.reasoning}
+                  onEdit={handleEditTranslation}
+                  onBackTranslate={() => handleBackTranslate()}
+                  isBackTranslating={isBackTranslating}
+                />
+              )}
             </div>
           )}
 
-          {/* Step 2: Translation */}
-          {currentStep === 2 && translationResult && (
-            <TranslationCard
-              original={translationResult.original}
-              translation={translationResult.translation}
-              language={translationResult.language}
-              reasoning={translationResult.reasoning}
-              onEdit={handleEditTranslation}
-              onBackTranslate={handleBackTranslate}
-              isBackTranslating={isBackTranslating}
-            />
-          )}
-
-          {/* Step 3: Quality Check */}
-          {currentStep === 3 && translationResult && backTranslationResult && (
+          {/* Step 2: Quality Check */}
+          {currentStep === 2 && translationResult && backTranslationResult && (
             <ComparisonView
               original={translationResult.original}
               translation={translationResult.translation}
@@ -250,8 +254,8 @@ export function HealthcareTranslator() {
             />
           )}
 
-          {/* Step 4: Audio */}
-          {currentStep === 4 && translationResult && audioUrl && (
+          {/* Step 3: Audio */}
+          {currentStep === 3 && translationResult && audioUrl && (
             <AudioPlayer
               audioUrl={audioUrl}
               translatedText={translationResult.translation}
