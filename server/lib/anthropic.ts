@@ -18,19 +18,35 @@ const anthropic = new Anthropic({
 
 export interface TranslationResult {
   translation: string;
-  reasoning: string;
+  culturalNotes: string;
 }
 
 export interface BackTranslationResult {
   backTranslation: string;
-  qualityScore: number;
+  culturalAnalysis: string;
 }
 
 export async function translateMessage(
   message: string,
-  systemPrompt: string
+  targetLanguage: string
 ): Promise<TranslationResult> {
   try {
+    const systemPrompt = `Claude, please think through this carefully.
+
+I need you to translate the following message to ${targetLanguage}. Consider the cultural context, appropriate tone, and any cultural nuances that would make this message more natural and respectful in the target culture.
+
+<thinking>
+[Think through the cultural context, tone, and word choices]
+</thinking>
+
+<translation>
+[Your ${targetLanguage} translation]
+</translation>
+
+<cultural_notes>
+[Explain any cultural adaptations you made and why]
+</cultural_notes>`;
+
     const response = await anthropic.messages.create({
       model: DEFAULT_MODEL_STR,
       system: systemPrompt,
@@ -47,7 +63,7 @@ export async function translateMessage(
     
     // Parse XML-structured response
     const translationMatch = content.text.match(/<translation>([\s\S]*?)<\/translation>/);
-    const reasoningMatch = content.text.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
+    const culturalNotesMatch = content.text.match(/<cultural_notes>([\s\S]*?)<\/cultural_notes>/);
     
     if (!translationMatch) {
       throw new Error('Translation not found in response');
@@ -55,7 +71,7 @@ export async function translateMessage(
 
     return {
       translation: translationMatch[1].trim(),
-      reasoning: reasoningMatch ? reasoningMatch[1].trim() : 'No reasoning provided'
+      culturalNotes: culturalNotesMatch ? culturalNotesMatch[1].trim() : 'No cultural notes provided'
     };
   } catch (error) {
     console.error('Translation error:', error);
@@ -69,27 +85,31 @@ export async function backTranslateMessage(
   targetLanguage: string
 ): Promise<BackTranslationResult> {
   try {
-    const systemPrompt = `You are a medical translator. Translate the ${targetLanguage} text back to English, maintaining medical accuracy. Then assess the quality by comparing with the original message.`;
+    const userContent = `Claude, please think through this carefully.
 
-    const userContent = `Original English: "${originalMessage}"
+I need you to translate this ${targetLanguage} text back to English AND consider if there are any cultural nuances from the original English message that might have been lost or changed.
 
+Original English: "${originalMessage}"
 ${targetLanguage} Translation: "${translation}"
 
-Please:
-1. Translate the ${targetLanguage} version back to English
-2. Rate the translation quality from 0-100 based on accuracy and cultural appropriateness
+<thinking>
+[Consider both the back-translation and cultural nuances]
+</thinking>
 
-Format your response as:
-<back_translation>[English translation]</back_translation>
-<quality_score>[number from 0-100]</quality_score>`;
+<back_translation>
+[English translation of the ${targetLanguage} text]
+</back_translation>
+
+<cultural_analysis>
+[Does the translation preserve the cultural intent of the original? Any concerns?]
+</cultural_analysis>`;
 
     const response = await anthropic.messages.create({
       model: DEFAULT_MODEL_STR,
-      system: systemPrompt,
       messages: [
         { role: 'user', content: userContent }
       ],
-      max_tokens: 500,
+      max_tokens: 600,
     });
 
     const content = response.content[0];
@@ -99,17 +119,15 @@ Format your response as:
     
     // Parse XML-structured response
     const backTranslationMatch = content.text.match(/<back_translation>([\s\S]*?)<\/back_translation>/);
-    const qualityScoreMatch = content.text.match(/<quality_score>(\d+)<\/quality_score>/);
+    const culturalAnalysisMatch = content.text.match(/<cultural_analysis>([\s\S]*?)<\/cultural_analysis>/);
     
     if (!backTranslationMatch) {
       throw new Error('Back-translation not found in response');
     }
 
-    const qualityScore = qualityScoreMatch ? parseInt(qualityScoreMatch[1]) : 75;
-
     return {
       backTranslation: backTranslationMatch[1].trim(),
-      qualityScore: Math.max(0, Math.min(100, qualityScore))
+      culturalAnalysis: culturalAnalysisMatch ? culturalAnalysisMatch[1].trim() : 'No cultural analysis provided'
     };
   } catch (error) {
     console.error('Back-translation error:', error);

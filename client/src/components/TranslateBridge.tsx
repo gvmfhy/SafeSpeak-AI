@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { MessageSquare, Settings, Pencil, Check, X, Play, Download, RotateCcw } from "lucide-react";
+import { MessageSquare, Settings, Pencil, Check, X, Play, Download, RotateCcw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from "./ThemeToggle";
+import { translateMessage, backTranslateMessage } from "@/lib/api";
 
 export function TranslateBridge() {
   // Application state - single page, no steps
@@ -34,6 +36,7 @@ export function TranslateBridge() {
   // UI state
   const [isEditingTranslation, setIsEditingTranslation] = useState(false);
   const [editedTranslation, setEditedTranslation] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const languages = [
     { value: "spanish", label: "Spanish" },
@@ -53,30 +56,20 @@ export function TranslateBridge() {
     setTranslationResult(null);
     setBackTranslationResult(null);
     setAudioUrl(null);
+    setError(null);
     
-    // todo: replace with actual Claude API call
-    setTimeout(() => {
-      const mockTranslations: Record<string, string> = {
-        spanish: "Hola, ¿cómo estás hoy?",
-        mandarin: "你好，你今天好吗？",
-        arabic: "مرحبا، كيف حالك اليوم؟",
-        french: "Salut, comment ça va aujourd'hui ?",
-        portuguese: "Olá, como você está hoje?",
-        russian: "Привет, как дела сегодня?",
-        korean: "안녕하세요, 오늘 어떠세요?",
-        vietnamese: "Xin chào, hôm nay bạn thế nào?",
-      };
+    try {
+      const result = await translateMessage(message, targetLanguage);
       
-      setTranslationResult({
-        translation: mockTranslations[targetLanguage] || "Translation not available",
-        culturalNotes: `Used appropriate greeting level for ${targetLanguage}. Chose informal tone suitable for casual conversation.`
-      });
-      
-      setIsTranslating(false);
+      setTranslationResult(result);
       
       // Auto-start back-translation
-      handleBackTranslate(mockTranslations[targetLanguage]);
-    }, 2000);
+      handleBackTranslate(result.translation);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Translation failed');
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const handleBackTranslate = async (translation?: string) => {
@@ -85,14 +78,14 @@ export function TranslateBridge() {
     
     setIsBackTranslating(true);
     
-    // todo: replace with actual Claude API call
-    setTimeout(() => {
-      setBackTranslationResult({
-        backTranslation: "Hello, how are you today?",
-        culturalAnalysis: "The translation preserves the casual, friendly tone of the original English. The greeting level is appropriate for informal conversation."
-      });
+    try {
+      const result = await backTranslateMessage(message, translationToUse, targetLanguage);
+      setBackTranslationResult(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Back-translation failed');
+    } finally {
       setIsBackTranslating(false);
-    }, 2000);
+    }
   };
 
   const handleApprove = async () => {
@@ -113,6 +106,7 @@ export function TranslateBridge() {
     setBackTranslationResult(null);
     setAudioUrl(null);
     setIsEditingTranslation(false);
+    setError(null);
   };
 
   const handleEditTranslation = () => {
@@ -170,6 +164,14 @@ export function TranslateBridge() {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
           
+          {/* Error Display */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Message Input - Always at Top */}
           <Card>
             <CardHeader className="pb-4">
