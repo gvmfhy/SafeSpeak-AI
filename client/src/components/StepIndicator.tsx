@@ -3,15 +3,20 @@ import { Check } from "lucide-react";
 interface StepIndicatorProps {
   currentStep: number;
   steps: string[];
+  onStepClick?: (step: number) => void;
+  canNavigateToStep?: (step: number) => boolean;
 }
 
-export function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
+export function StepIndicator({ currentStep, steps, onStepClick, canNavigateToStep }: StepIndicatorProps) {
   return (
     <div className="flex items-center justify-between w-full max-w-3xl mx-auto mb-8">
       {steps.map((step, index) => {
         const stepNumber = index + 1;
         const isCompleted = stepNumber < currentStep;
         const isCurrent = stepNumber === currentStep;
+        
+        const canNavigate = canNavigateToStep ? canNavigateToStep(stepNumber) : false;
+        const isClickable = onStepClick && canNavigate;
         
         return (
           <div key={step} className="flex items-center">
@@ -23,8 +28,9 @@ export function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
                     : isCurrent
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground"
-                }`}
+                } ${isClickable ? "cursor-pointer hover-elevate" : ""}`}
                 data-testid={`step-indicator-${stepNumber}`}
+                onClick={() => isClickable && onStepClick(stepNumber)}
               >
                 {isCompleted ? (
                   <Check className="w-5 h-5" />

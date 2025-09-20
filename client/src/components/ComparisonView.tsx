@@ -152,6 +152,12 @@ export function ComparisonView({
             )}
           </Button>
         </div>
+        
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground">
+            Tip: Click on step indicators above to navigate between completed steps
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

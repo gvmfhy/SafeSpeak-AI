@@ -178,6 +178,21 @@ export function HealthcareTranslator() {
     console.log('Workflow restarted');
   };
 
+  const handleStepNavigation = (step: number) => {
+    setCurrentStep(step);
+    console.log('Navigated to step:', step);
+  };
+
+  const canNavigateToStep = (step: number) => {
+    // Can always go back to step 1
+    if (step === 1) return true;
+    // Can go to step 2 if we have translation results
+    if (step === 2 && translationResult && backTranslationResult) return true;
+    // Can go to step 3 if we have audio
+    if (step === 3 && audioUrl) return true;
+    return false;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -203,7 +218,12 @@ export function HealthcareTranslator() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {/* Step Indicator */}
-        <StepIndicator currentStep={currentStep} steps={steps} />
+        <StepIndicator 
+          currentStep={currentStep} 
+          steps={steps}
+          onStepClick={handleStepNavigation}
+          canNavigateToStep={canNavigateToStep}
+        />
 
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Step 1: Input & Translation */}
