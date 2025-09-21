@@ -153,18 +153,12 @@ I need you to translate the following message with cultural sensitivity and appr
           },
           onChunk: (chunk: string) => {
             console.log("📝 Streaming chunk:", chunk);
-            
             // Update stream preview immediately for responsive feedback
             setStreamPreview(prev => prev + chunk);
-            
-            // Add artificial delay for main translation display for better typewriter effect
-            setTimeout(() => {
-              setStreamingText(prev => {
-                const newText = prev + chunk;
-                console.log("📄 Current streaming text:", newText);
-                return newText;
-              });
-            }, 50); // 50ms delay between chunks for visible typewriter effect
+          },
+          // New typewriter effect - character by character display
+          onCharacter: (displayText: string) => {
+            setStreamingText(displayText);
           },
           onComplete: async (fullText: string) => {
             console.log("✅ Streaming complete:", fullText);
