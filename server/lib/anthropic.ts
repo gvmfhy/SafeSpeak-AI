@@ -89,12 +89,14 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
     }
 
     // Define the tool for structured translation response
+    // Properties ordered logically to guide LLM reasoning: Analysis → Strategy → Execution → Reflection
     const translationTool = {
       name: "submit_translation",
       description: "Submits the culturally-aware translation and its corresponding analysis.",
       input_schema: {
         type: "object",
         properties: {
+          // 1. ANALYSIS FIELDS (The "Why")
           intent: {
             type: "string",
             description: "The user's communication goal."
@@ -103,17 +105,20 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
             type: "string",
             description: "Key cultural factors for the target language."
           },
+          // 2. STRATEGY FIELD (The "How")
           strategy: {
             type: "string",
-            description: "The translation approach taken."
+            description: "The translation approach taken based on the analysis."
           },
+          // 3. EXECUTION FIELD (The "What")
           translation: {
             type: "string",
             description: "The final, culturally appropriate translation."
           },
+          // 4. EXPLANATION FIELD (The "Reflection")
           cultural_notes: {
             type: "string",
-            description: "Explanation of cultural adaptations made."
+            description: "Explanation of the specific cultural adaptations made in the translation."
           }
         },
         required: ["intent", "cultural_considerations", "strategy", "translation", "cultural_notes"]
@@ -169,27 +174,32 @@ export async function backTranslateMessage(
 ): Promise<BackTranslationResult> {
   try {
     // Define the tool for structured back-translation response
+    // Properties ordered logically: Translation → Analysis → Assessment
     const backTranslationTool = {
       name: "submit_back_translation",
       description: "Submits the back-translation analysis and safety check results.",
       input_schema: {
         type: "object",
         properties: {
+          // 1. LITERAL TRANSLATION (The "What")
           literal_translation: {
             type: "string",
             description: "Word-for-word English translation of the text."
           },
+          // 2. PERCEPTION ANALYSIS (The "How it feels")
           perceived_tone: {
             type: "string",
             description: "How a native speaker would perceive the tone."
           },
+          // 3. CULTURAL ANALYSIS (The "Hidden meanings")
           cultural_nuance: {
             type: "string",
             description: "Cultural implications and hidden meanings."
           },
+          // 4. OVERALL ASSESSMENT (The "Final judgment")
           overall_assessment: {
             type: "string",
-            description: "How this would be received by a native speaker."
+            description: "How this would be received by a native speaker in their cultural context."
           }
         },
         required: ["literal_translation", "perceived_tone", "cultural_nuance", "overall_assessment"]
