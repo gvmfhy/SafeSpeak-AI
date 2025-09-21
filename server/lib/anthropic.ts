@@ -134,16 +134,13 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
       messages: [
         { role: 'user', content: message }
       ],
-      max_tokens: 1000,
+      max_tokens: 2500, // Increased for complex medical translations
       tools: [translationTool],
       tool_choice: { type: "tool", name: "submit_translation" }
     });
 
     // Use Tool Calling for reliable structured response
-    console.log('Raw Claude response:', JSON.stringify(response, null, 2));
-    
     const toolCall = response.content.find(contentBlock => contentBlock.type === "tool_use");
-    console.log('Found tool call:', JSON.stringify(toolCall, null, 2));
 
     if (!toolCall || toolCall.name !== 'submit_translation') {
       throw new Error("Expected the AI to use the 'submit_translation' tool.");
@@ -233,7 +230,7 @@ Provide a literal English translation, analyze the perceived tone, identify cult
       messages: [
         { role: 'user', content: 'Please analyze the provided text using the submit_back_translation tool.' }
       ],
-      max_tokens: 600,
+      max_tokens: 1500, // Increased for complex medical back-translations
       tools: [backTranslationTool],
       tool_choice: { type: "tool", name: "submit_back_translation" }
     });
@@ -309,7 +306,7 @@ IMPROVEMENT_NOTES:
       messages: [
         { role: 'user', content: 'Please provide the refined translation based on my feedback.' }
       ],
-      max_tokens: 800,
+      max_tokens: 1200, // Increased for complex medical refinements
     });
 
     const content = response.content[0];

@@ -1,0 +1,15 @@
+Patient is DNR/DNI but wants full treatment otherwise including pressors and dialysis. No CPR or intubation if heart stops, but aggressive care until then.
+5150 hold expires at 1400 tomorrow. Patient remains gravely disabled. Initiate 5250 before expiration or patient must be released regardless of condition.
+Blood glucose 200-250: give 2 units. 251-300: give 4 units. If ate <50% of meal, halve all doses. If NPO for procedure, hold insulin entirely.
+tPA must be given within 3 hours of symptom onset. Absolute contraindication after 4.5 hours. Time of onset uncertain = do not give.
+Allergic to morphine (anaphylaxis), intolerant to codeine (nausea only). Can give fentanyl for surgery but not morphine derivatives.
+For infants under 28 days: any fever is emergency. For 29-90 days: fever over 100.4°F needs immediate evaluation. Older children: monitor at home if otherwise well.
+Will accept blood transfusion but no pooled products. Accepts packed red cells and platelets from single donors only. Religious exemption for plasma.
+Safe during breastfeeding. Absolutely contraindicated in pregnancy - causes fatal birth defects. Must use two forms of birth control.
+Denies suicidal ideation but refused safety contract. States 'no plan' but bought rope yesterday per family.
+Clear liquids only but no red, purple, or blue colors. Black coffee OK, no cream. Nothing by mouth after midnight including water.
+K+ 6.8 CRITICAL. Give calcium gluconate immediately, then insulin/glucose, then kayexalate. Recheck in 1 hour.
+Scheduled metoprolol twice daily. Hold if BP<100. PRN hydralazine for BP>180. Never give both within 2 hours.
+Start with 1.5% dextrose solution. Switch to 2.5% only if ultrafiltration <500ml after 2 hours. If hypotensive, return to 1.5% immediately.
+Patient nodded consent but asked 'will I wake up?' suggesting doesn't understand this is local only, not general anesthesia.
+10mg/kg for all children up to 40kg max. Above 40kg, give adult dose of 400mg regardless of weight. Never exceed 400mg even if calculation suggests more.
