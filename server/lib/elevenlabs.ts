@@ -12,8 +12,8 @@ interface GenerateAudioResponse {
 class ElevenLabsService {
   private apiKey: string;
   private baseUrl = 'https://api.elevenlabs.io/v1';
-  private defaultVoiceId = 'JBFqnCBsd6RMkjVDRZzb'; // v3 optimized creative voice
-  private defaultModel = 'eleven_v3'; // v3 creative model for maximum expressiveness
+  private defaultVoiceId = 'yjJ45q8TVCrtMhEKurxY'; // Professional v3-optimized voice
+  private defaultModel = 'eleven_v3'; // ElevenLabs' latest flagship model
 
   constructor(options: ElevenLabsOptions) {
     this.apiKey = options.apiKey;
@@ -52,10 +52,10 @@ class ElevenLabsService {
           model_id: this.defaultModel,
           language_code: languageCode,
           voice_settings: {
-            stability: 0.0, // Creative mode (0.0) for maximum v3 expressiveness
-            similarity_boost: 0.85, // Higher similarity for v3 quality
-            style: 0.35, // Enhanced style for more expressive v3 creative output
-            use_speaker_boost: true // Enhanced clarity and presence
+            stability: 0.5, // Balanced stability for natural speech
+            similarity_boost: 0.8, // High similarity for voice consistency
+            style: 0.0, // Style is only for v2 English models
+            use_speaker_boost: true // Enhanced clarity
           }
         }),
       });
