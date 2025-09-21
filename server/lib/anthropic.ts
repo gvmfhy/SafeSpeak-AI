@@ -12,9 +12,11 @@ When copying code from this code snippet, ensure you also include this informati
 const DEFAULT_MODEL_STR = "claude-sonnet-4-20250514";
 // </important_do_not_delete>
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const getAnthropicClient = (customApiKey?: string) => {
+  return new Anthropic({
+    apiKey: customApiKey || process.env.ANTHROPIC_API_KEY,
+  });
+};
 
 export interface TranslationResult {
   translation: string;
@@ -28,12 +30,31 @@ export interface BackTranslationResult {
 
 export async function translateMessage(
   message: string,
-  targetLanguage: string
+  targetLanguage: string,
+  customSystemPrompt?: string,
+  presetContext?: {
+    tone: string;
+    culturalContext: string;
+    customPrompt?: string;
+  },
+  customApiKey?: string
 ): Promise<TranslationResult> {
   try {
-    const systemPrompt = `Claude, please think through this carefully.
+    let systemPrompt = customSystemPrompt;
+    
+    // If no custom system prompt, use default with preset context
+    if (!systemPrompt) {
+      const toneGuidance = presetContext?.tone ? `Use a ${presetContext.tone} tone.` : '';
+      const culturalGuidance = presetContext?.culturalContext ? `Cultural context: ${presetContext.culturalContext}` : '';
+      const customGuidance = presetContext?.customPrompt ? `Additional instructions: ${presetContext.customPrompt}` : '';
+      
+      systemPrompt = `Claude, please think through this carefully.
 
 I need you to translate the following message to ${targetLanguage}. Consider the cultural context, appropriate tone, and any cultural nuances that would make this message more natural and respectful in the target culture.
+
+${toneGuidance}
+${culturalGuidance}
+${customGuidance}
 
 <thinking>
 [Think through the cultural context, tone, and word choices]
@@ -46,7 +67,12 @@ I need you to translate the following message to ${targetLanguage}. Consider the
 <cultural_notes>
 [Explain any cultural adaptations you made and why]
 </cultural_notes>`;
+    } else {
+      // Replace placeholders in custom system prompt
+      systemPrompt = systemPrompt.replace(/\{TARGET_LANGUAGE\}/g, targetLanguage);
+    }
 
+    const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
       model: DEFAULT_MODEL_STR,
       system: systemPrompt,
@@ -82,7 +108,8 @@ I need you to translate the following message to ${targetLanguage}. Consider the
 export async function backTranslateMessage(
   originalMessage: string,
   translation: string,
-  targetLanguage: string
+  targetLanguage: string,
+  customApiKey?: string
 ): Promise<BackTranslationResult> {
   try {
     const userContent = `Claude, please think through this carefully.
@@ -104,6 +131,7 @@ ${targetLanguage} Translation: "${translation}"
 [Does the translation preserve the cultural intent of the original? Any concerns?]
 </cultural_analysis>`;
 
+    const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
       model: DEFAULT_MODEL_STR,
       messages: [

@@ -18,7 +18,14 @@ interface ApiResponse<T> {
 
 export async function translateMessage(
   message: string, 
-  targetLanguage: string
+  targetLanguage: string,
+  systemPrompt?: string,
+  presetContext?: {
+    tone: string;
+    culturalContext: string;
+    customPrompt?: string;
+  },
+  customKeys?: { anthropic: string; elevenlabs: string }
 ): Promise<TranslationResult> {
   const response = await fetch('/api/translate', {
     method: 'POST',
@@ -28,6 +35,9 @@ export async function translateMessage(
     body: JSON.stringify({
       message,
       targetLanguage,
+      systemPrompt,
+      presetContext,
+      customKeys,
     }),
   });
 
@@ -43,7 +53,8 @@ export async function translateMessage(
 export async function backTranslateMessage(
   originalMessage: string,
   translation: string,
-  targetLanguage: string
+  targetLanguage: string,
+  customKeys?: { anthropic: string; elevenlabs: string }
 ): Promise<BackTranslationResult> {
   const response = await fetch('/api/back-translate', {
     method: 'POST',
@@ -54,6 +65,7 @@ export async function backTranslateMessage(
       originalMessage,
       translation,
       targetLanguage,
+      customKeys,
     }),
   });
 
@@ -72,7 +84,8 @@ interface AudioResult {
 
 export async function generateAudio(
   text: string,
-  language: string
+  language: string,
+  customKeys?: { anthropic: string; elevenlabs: string }
 ): Promise<AudioResult> {
   const response = await fetch('/api/generate-audio', {
     method: 'POST',
@@ -82,6 +95,7 @@ export async function generateAudio(
     body: JSON.stringify({
       text,
       language,
+      customKeys,
     }),
   });
 

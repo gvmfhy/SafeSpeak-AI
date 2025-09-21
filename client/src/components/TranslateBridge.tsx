@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { MessageSquare, Settings, Pencil, Check, X, Play, Download, RotateCcw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from "./ThemeToggle";
+import { SettingsDrawer, type RecipientPreset } from "./SettingsDrawer";
 import { translateMessage, backTranslateMessage, generateAudio } from "@/lib/api";
 
 export function TranslateBridge() {
@@ -42,6 +43,30 @@ export function TranslateBridge() {
   // Audio ref for playback
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Settings state
+  const [recipientPresets, setRecipientPresets] = useState<RecipientPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>(undefined);
+  const [systemPrompt, setSystemPrompt] = useState(`Claude, please think through this carefully.
+
+I need you to translate the following message with cultural sensitivity and appropriate tone. Consider the cultural context, communication patterns, and any nuances that would make this message more natural and respectful in the target culture.
+
+<thinking>
+[Consider cultural context, tone, formality level, and word choices that would be most appropriate]
+</thinking>
+
+<translation>
+[Your translation in the target language]
+</translation>
+
+<cultural_notes>
+[Explain any cultural adaptations you made and why they improve communication effectiveness]
+</cultural_notes>`);
+  const [hasEditedPrompt, setHasEditedPrompt] = useState(false);
+  
+  // API key management state
+  const [useManagedKeys, setUseManagedKeys] = useState(true);
+  const [customKeys, setCustomKeys] = useState({ anthropic: "", elevenlabs: "" });
+
   const languages = [
     { value: "spanish", label: "Spanish" },
     { value: "mandarin", label: "Mandarin Chinese" },
@@ -63,7 +88,15 @@ export function TranslateBridge() {
     setError(null);
     
     try {
-      const result = await translateMessage(message, targetLanguage);
+      // Get preset context if one is selected
+      const selectedPreset = recipientPresets.find(p => p.id === selectedPresetId);
+      const presetContext = selectedPreset ? {
+        tone: selectedPreset.tone,
+        culturalContext: selectedPreset.culturalContext,
+        customPrompt: selectedPreset.customPrompt
+      } : undefined;
+      
+      const result = await translateMessage(message, targetLanguage, hasEditedPrompt ? systemPrompt : undefined, presetContext, useManagedKeys ? undefined : customKeys);
       
       setTranslationResult(result);
       
@@ -83,7 +116,7 @@ export function TranslateBridge() {
     setIsBackTranslating(true);
     
     try {
-      const result = await backTranslateMessage(message, translationToUse, targetLanguage);
+      const result = await backTranslateMessage(message, translationToUse, targetLanguage, useManagedKeys ? undefined : customKeys);
       setBackTranslationResult(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Back-translation failed');
@@ -99,7 +132,7 @@ export function TranslateBridge() {
     setError(null);
     
     try {
-      const result = await generateAudio(translationResult.translation, targetLanguage);
+      const result = await generateAudio(translationResult.translation, targetLanguage, useManagedKeys ? undefined : customKeys);
       setAudioUrl(result.audioUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Audio generation failed');
@@ -123,6 +156,122 @@ export function TranslateBridge() {
       audioRef.current.currentTime = 0;
     }
   };
+
+  // Settings handlers
+  const handlePresetChange = (presetId: string) => {
+    setSelectedPresetId(presetId);
+    const preset = recipientPresets.find(p => p.id === presetId);
+    if (preset) {
+      setTargetLanguage(preset.language);
+    }
+  };
+
+  const handlePresetCreate = (presetData: Omit<RecipientPreset, 'id'>) => {
+    const newPreset: RecipientPreset = {
+      ...presetData,
+      id: Date.now().toString(), // Simple ID generation
+    };
+    setRecipientPresets(prev => [...prev, newPreset]);
+  };
+
+  const handlePresetDelete = (presetId: string) => {
+    setRecipientPresets(prev => prev.filter(p => p.id !== presetId));
+    if (selectedPresetId === presetId) {
+      setSelectedPresetId(undefined);
+    }
+  };
+
+  const handleSystemPromptChange = (prompt: string) => {
+    setSystemPrompt(prompt);
+    setHasEditedPrompt(true);
+  };
+
+  const handleManagedKeysChange = (managed: boolean) => {
+    setUseManagedKeys(managed);
+    if (managed) {
+      // Clear custom keys when switching back to managed
+      setCustomKeys({ anthropic: "", elevenlabs: "" });
+    }
+  };
+
+  const handleCustomKeysChange = (keys: { anthropic: string; elevenlabs: string }) => {
+    setCustomKeys(keys);
+  };
+
+  // Load settings from localStorage and sessionStorage on mount
+  useEffect(() => {
+    const savedPresets = localStorage.getItem('translatebridge-presets');
+    const savedSystemPrompt = localStorage.getItem('translatebridge-system-prompt');
+    const savedHasEditedPrompt = localStorage.getItem('translatebridge-has-edited-prompt');
+    const savedSelectedPreset = localStorage.getItem('translatebridge-selected-preset');
+    const savedUseManagedKeys = sessionStorage.getItem('translatebridge-use-managed-keys');
+    const savedCustomKeys = sessionStorage.getItem('translatebridge-custom-keys');
+    
+    if (savedPresets) {
+      try {
+        setRecipientPresets(JSON.parse(savedPresets));
+      } catch (e) {
+        console.warn('Failed to load saved presets:', e);
+      }
+    }
+    
+    if (savedSystemPrompt) {
+      setSystemPrompt(savedSystemPrompt);
+    }
+    
+    if (savedHasEditedPrompt) {
+      try {
+        setHasEditedPrompt(JSON.parse(savedHasEditedPrompt));
+      } catch (e) {
+        console.warn('Failed to load hasEditedPrompt:', e);
+      }
+    }
+    
+    if (savedSelectedPreset) {
+      setSelectedPresetId(savedSelectedPreset);
+    }
+    
+    if (savedUseManagedKeys !== null) {
+      setUseManagedKeys(savedUseManagedKeys === 'true');
+    }
+    
+    if (savedCustomKeys) {
+      try {
+        setCustomKeys(JSON.parse(savedCustomKeys));
+      } catch (e) {
+        console.warn('Failed to load saved custom keys:', e);
+      }
+    }
+  }, []);
+
+  // Save settings to localStorage and sessionStorage when they change
+  useEffect(() => {
+    localStorage.setItem('translatebridge-presets', JSON.stringify(recipientPresets));
+  }, [recipientPresets]);
+
+  useEffect(() => {
+    localStorage.setItem('translatebridge-system-prompt', systemPrompt);
+  }, [systemPrompt]);
+
+  useEffect(() => {
+    localStorage.setItem('translatebridge-has-edited-prompt', JSON.stringify(hasEditedPrompt));
+  }, [hasEditedPrompt]);
+
+  useEffect(() => {
+    if (selectedPresetId) {
+      localStorage.setItem('translatebridge-selected-preset', selectedPresetId);
+    } else {
+      localStorage.removeItem('translatebridge-selected-preset');
+    }
+  }, [selectedPresetId]);
+
+  useEffect(() => {
+    sessionStorage.setItem('translatebridge-use-managed-keys', useManagedKeys.toString());
+  }, [useManagedKeys]);
+
+  useEffect(() => {
+    sessionStorage.setItem('translatebridge-custom-keys', JSON.stringify(customKeys));
+  }, [customKeys]);
 
   const handleEditTranslation = () => {
     if (translationResult) {
@@ -193,9 +342,19 @@ export function TranslateBridge() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="icon" className="hover-elevate">
-                <Settings className="w-4 h-4" />
-              </Button>
+              <SettingsDrawer
+                recipientPresets={recipientPresets}
+                selectedPresetId={selectedPresetId}
+                onPresetChange={handlePresetChange}
+                onPresetCreate={handlePresetCreate}
+                onPresetDelete={handlePresetDelete}
+                systemPrompt={systemPrompt}
+                onSystemPromptChange={handleSystemPromptChange}
+                useManagedKeys={useManagedKeys}
+                onManagedKeysChange={handleManagedKeysChange}
+                customKeys={customKeys}
+                onCustomKeysChange={handleCustomKeysChange}
+              />
               <ThemeToggle />
             </div>
           </div>

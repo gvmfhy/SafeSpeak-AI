@@ -8,27 +8,45 @@ import { z } from "zod";
 // Validation schemas
 const translateSchema = z.object({
   message: z.string().min(1),
-  targetLanguage: z.string().min(1)
+  targetLanguage: z.string().min(1),
+  systemPrompt: z.string().optional(),
+  presetContext: z.object({
+    tone: z.string(),
+    culturalContext: z.string(),
+    customPrompt: z.string().optional(),
+  }).optional(),
+  customKeys: z.object({
+    anthropic: z.string(),
+    elevenlabs: z.string(),
+  }).optional()
 });
 
 const backTranslateSchema = z.object({
   originalMessage: z.string().min(1),
   translation: z.string().min(1),
-  targetLanguage: z.string().min(1)
+  targetLanguage: z.string().min(1),
+  customKeys: z.object({
+    anthropic: z.string(),
+    elevenlabs: z.string(),
+  }).optional()
 });
 
 const generateAudioSchema = z.object({
   text: z.string().min(1),
-  language: z.string().min(1)
+  language: z.string().min(1),
+  customKeys: z.object({
+    anthropic: z.string(),
+    elevenlabs: z.string(),
+  }).optional()
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Translation endpoint
   app.post('/api/translate', async (req, res) => {
     try {
-      const { message, targetLanguage } = translateSchema.parse(req.body);
+      const { message, targetLanguage, systemPrompt, presetContext, customKeys } = translateSchema.parse(req.body);
       
-      const result = await translateMessage(message, targetLanguage);
+      const result = await translateMessage(message, targetLanguage, systemPrompt, presetContext, customKeys?.anthropic);
       
       res.json({
         success: true,
@@ -46,9 +64,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Back-translation endpoint
   app.post('/api/back-translate', async (req, res) => {
     try {
-      const { originalMessage, translation, targetLanguage } = backTranslateSchema.parse(req.body);
+      const { originalMessage, translation, targetLanguage, customKeys } = backTranslateSchema.parse(req.body);
       
-      const result = await backTranslateMessage(originalMessage, translation, targetLanguage);
+      const result = await backTranslateMessage(originalMessage, translation, targetLanguage, customKeys?.anthropic);
       
       res.json({
         success: true,
@@ -66,14 +84,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Audio generation endpoint
   app.post('/api/generate-audio', async (req, res) => {
     try {
-      const { text, language } = generateAudioSchema.parse(req.body);
+      const { text, language, customKeys } = generateAudioSchema.parse(req.body);
       
-      if (!process.env.ELEVENLABS_API_KEY) {
+      const elevenLabsApiKey = customKeys?.elevenlabs || process.env.ELEVENLABS_API_KEY;
+      if (!elevenLabsApiKey) {
         throw new Error('ElevenLabs API key not configured');
       }
       
       const elevenLabsService = new ElevenLabsService({
-        apiKey: process.env.ELEVENLABS_API_KEY
+        apiKey: elevenLabsApiKey
       });
       
       const result = await elevenLabsService.generateAudio(text, language);
