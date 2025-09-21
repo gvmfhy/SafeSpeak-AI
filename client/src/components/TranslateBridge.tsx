@@ -249,7 +249,7 @@ I need you to translate the following message with cultural sensitivity and appr
     setError(null);
     
     try {
-      const result = await generateAudio(translationResult.translation, targetLanguage, getApiKeys());
+      const result = await generateAudio(translationResult.translation, getLanguageLabel(), getApiKeys());
       setAudioUrl(result.audioUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Audio generation failed');

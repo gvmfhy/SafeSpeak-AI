@@ -12,8 +12,8 @@ interface GenerateAudioResponse {
 class ElevenLabsService {
   private apiKey: string;
   private baseUrl = 'https://api.elevenlabs.io/v1';
-  private defaultVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam - v3 optimized multilingual voice
-  private defaultModel = 'eleven_v3'; // Latest v3 model
+  private defaultVoiceId = '21m00Tcm4TlvDq8ikWAM'; // Rachel - v3 creative expressive voice
+  private defaultModel = 'eleven_v3'; // v3 creative model for maximum expressiveness
 
   constructor(options: ElevenLabsOptions) {
     this.apiKey = options.apiKey;
@@ -28,6 +28,7 @@ class ElevenLabsService {
       const languageCodeMap: Record<string, string> = {
         'spanish': 'es',
         'mandarin chinese': 'zh',
+        'mandarin': 'zh', // Fix for Mandarin mapping bug
         'japanese': 'ja', 
         'arabic': 'ar',
         'french': 'fr',
@@ -51,10 +52,10 @@ class ElevenLabsService {
           model_id: this.defaultModel,
           language_code: languageCode,
           voice_settings: {
-            stability: 0.0, // Creative mode for maximum v3 expressiveness
-            similarity_boost: 0.8, // Higher similarity for v3
-            style: 0.2, // Enhanced style for v3
-            use_speaker_boost: true // Enhanced clarity
+            stability: 0.0, // Creative mode (0.0) for maximum v3 expressiveness
+            similarity_boost: 0.85, // Higher similarity for v3 quality
+            style: 0.35, // Enhanced style for more expressive v3 creative output
+            use_speaker_boost: true // Enhanced clarity and presence
           }
         }),
       });
