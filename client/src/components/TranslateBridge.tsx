@@ -128,8 +128,10 @@ I need you to translate the following message with cultural sensitivity and appr
       
       setTranslationResult(result);
       
-      // Auto-start back-translation
-      handleBackTranslate(result.translation);
+      // Start back-translation in background after brief delay for better UX
+      setTimeout(() => {
+        handleBackTranslate(result.translation);
+      }, 500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Translation failed');
     } finally {
@@ -617,10 +619,26 @@ I need you to translate the following message with cultural sensitivity and appr
                           </div>
                         )}
                       </div>
+                    ) : isBackTranslating ? (
+                      <div className="p-4 text-center">
+                        <div className="inline-flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="text-sm text-muted-foreground">Running safety check...</span>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="p-4 bg-slate-50 dark:bg-slate-950/30 border-l-4 border-slate-300 dark:border-slate-600 rounded-r-md">
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {isBackTranslating ? "Running safety check..." : "Safety check will run automatically"}
+                      <div className="p-4 text-center">
+                        <Button 
+                          onClick={() => handleBackTranslate()} 
+                          variant="outline" 
+                          size="sm"
+                          data-testid="button-run-safety-check"
+                        >
+                          <AlertCircle className="w-4 h-4 mr-2" />
+                          Run Safety Check
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Optional: Verify translation accuracy
                         </p>
                       </div>
                     )}
@@ -630,8 +648,8 @@ I need you to translate the following message with cultural sensitivity and appr
             </div>
           )}
 
-          {/* Step 4: Action Box - Only shows when safety check is complete */}
-          {backTranslationResult && (
+          {/* Step 4: Action Box - Shows when translation is ready */}
+          {translationResult && (
             <Card>
               <CardHeader>
                 <h3 className="text-lg font-semibold text-center">Step 4: Action</h3>
