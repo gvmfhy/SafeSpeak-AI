@@ -184,6 +184,11 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
 
     // Create explicit user message that reinforces target language
     const userMessage = `Please translate this message to ${properCaseLanguage}: "${message}"`;
+    
+    // DEBUG: Log what we're actually sending to the AI
+    console.log("🎯 DEBUG - Target Language:", properCaseLanguage);
+    console.log("🎯 DEBUG - User Message:", userMessage);
+    console.log("🎯 DEBUG - System Prompt:", systemPrompt);
 
     const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
