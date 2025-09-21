@@ -95,6 +95,14 @@ I need you to translate the following message with cultural sensitivity and appr
     { value: "vietnamese", label: "Vietnamese" },
   ];
 
+  // Helper functions to eliminate repetition
+  const getLanguageLabel = () => {
+    const selectedLang = languages.find(lang => lang.value === targetLanguage);
+    return selectedLang ? selectedLang.label : targetLanguage;
+  };
+
+  const getApiKeys = () => useManagedKeys ? undefined : customKeys;
+
   const handleTranslate = async () => {
     if (!message.trim()) return;
     
@@ -113,11 +121,7 @@ I need you to translate the following message with cultural sensitivity and appr
         customPrompt: selectedPreset.customPrompt
       } : undefined;
       
-      // Get the language label instead of value for clearer communication with Claude
-      const selectedLang = languages.find(lang => lang.value === targetLanguage);
-      const languageLabel = selectedLang ? selectedLang.label : targetLanguage;
-      
-      const result = await translateMessage(message, languageLabel, hasEditedPrompt ? systemPrompt : undefined, presetContext, useManagedKeys ? undefined : customKeys);
+      const result = await translateMessage(message, getLanguageLabel(), hasEditedPrompt ? systemPrompt : undefined, presetContext, getApiKeys());
       
       setTranslationResult(result);
       
@@ -137,11 +141,7 @@ I need you to translate the following message with cultural sensitivity and appr
     setIsBackTranslating(true);
     
     try {
-      // Use the same language label for back-translation
-      const selectedLang = languages.find(lang => lang.value === targetLanguage);
-      const languageLabel = selectedLang ? selectedLang.label : targetLanguage;
-      
-      const result = await backTranslateMessage(message, translationToUse, languageLabel, useManagedKeys ? undefined : customKeys);
+      const result = await backTranslateMessage(message, translationToUse, getLanguageLabel(), getApiKeys());
       setBackTranslationResult(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Back-translation failed');
@@ -157,7 +157,7 @@ I need you to translate the following message with cultural sensitivity and appr
     setError(null);
     
     try {
-      const result = await generateAudio(translationResult.translation, targetLanguage, useManagedKeys ? undefined : customKeys);
+      const result = await generateAudio(translationResult.translation, targetLanguage, getApiKeys());
       setAudioUrl(result.audioUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Audio generation failed');
@@ -179,7 +179,7 @@ I need you to translate the following message with cultural sensitivity and appr
         targetLanguage,
         userFeedback: refinementFeedback,
         conversationContext: `Original analysis - Intent: ${translationResult.intent || 'N/A'}, Cultural Considerations: ${translationResult.culturalConsiderations || 'N/A'}, Strategy: ${translationResult.strategy || 'N/A'}`
-      }, useManagedKeys ? undefined : customKeys);
+      }, getApiKeys());
       
       setRefinementResult(result);
       
