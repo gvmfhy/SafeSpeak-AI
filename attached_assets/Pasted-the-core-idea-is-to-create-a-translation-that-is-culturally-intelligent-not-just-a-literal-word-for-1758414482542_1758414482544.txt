@@ -1,0 +1,84 @@
+the core idea is to create a translation that is culturally intelligent, not just a literal word-for-word conversion. Here is a streamlined workflow and the exact prompts to make that happen.
+
+## Step 1: The "Smart" Translation (Initial Request)
+This is the main prompt. You give the AI all the context and ask it to "think out loud" before giving the final answer. This lets you see its reasoning for safety and lets your app easily grab the final translation.
+
+The Prompt Template:
+
+You are a cultural translation assistant. Your task is to translate a message, but first, you must think through the context step-by-step to ensure the translation is culturally appropriate.
+
+Context:
+
+Target Language: {e.g., Mandarin Chinese}
+
+Relationship: {e.g., Friend of the patient's daughter}
+
+Setting: {e.g., Hospital bedside, patient is elderly and recovering}
+
+Message to Translate:
+"{User's English message goes here}"
+
+Your Process:
+
+Analyze Intent: First, explain what the user is trying to achieve with this message (e.g., "The user is trying to comfort the patient while explaining a medical procedure.").
+
+Cultural Considerations: Next, list key cultural factors (e.g., "For an elder in Chinese culture, it's important to show respect and avoid overly direct or alarming medical language.").
+
+Translation Strategy: Based on the above, describe your translation strategy (e.g., "I will use the formal 'you' (您), use a euphemism for 'catheter', and add a reassuring phrase at the end.").
+
+Final Translation: Finally, provide the translation clearly labeled.
+
+BEGIN ANALYSIS
+
+Intent: ...
+
+Cultural Considerations: ...
+
+Strategy: ...
+
+TRANSLATION:
+{The final translated text will be here}
+
+How your app uses this: Your app will display the entire response (the analysis and the translation) to the user. For the next step, it will just copy the text under the TRANSLATION: label.
+
+## Step 2: The Safety Check (Independent Back-Translation)
+Now, your app takes the translated text from Step 1 and sends it to a completely new, fresh chat session with the AI. This prevents the AI from "cheating" by remembering the original English.
+
+The Prompt Template:
+
+You are a back-translation specialist. Your job is to translate the following text into English and explain what a native speaker would truly understand from it, including its tone and any hidden meanings.
+
+Text to Analyze:
+"{Paste the foreign language text from Step 1 here}"
+
+Provide the following:
+
+Literal English Translation:
+
+Perceived Tone: (e.g., Formal, Warm, Clinical, Respectful)
+
+Cultural Nuance: (e.g., "This phrasing implies the speaker is taking responsibility and is not a medical professional.")
+
+How your app uses this: The app displays this information next to the original translation, so the user can see:
+
+What they wanted to say (Original English).
+
+What the AI generated (The translation).
+
+What the translation actually means to a native speaker (The safety check).
+
+## Step 3: The User Refinement Loop
+If the user isn't happy with the translation, they can ask for changes. Your app sends this feedback back into the original conversation from Step 1 so the AI still has all the context.
+
+The Prompt Template:
+
+The user reviewed your last translation.
+
+User Feedback: "{e.g., "That sounds a bit too cold. Can you make it sound warmer and more personal?"}"
+
+Please provide a new version of the translation that incorporates this feedback. Explain what you changed and why, then provide the new translation.
+
+REVISED TRANSLATION:
+{The new translation will be here}
+
+This process gives you the best of both worlds: a smart, context-aware translation and a robust, independent safety check, all in a workflow that is easy for a non-technical user to follow.

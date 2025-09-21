@@ -21,11 +21,33 @@ const getAnthropicClient = (customApiKey?: string) => {
 export interface TranslationResult {
   translation: string;
   culturalNotes: string;
+  // Enhanced cultural intelligence analysis
+  intent?: string;
+  culturalConsiderations?: string;
+  strategy?: string;
 }
 
 export interface BackTranslationResult {
   backTranslation: string;
   culturalAnalysis: string;
+  // Enhanced safety check analysis
+  literalTranslation?: string;
+  perceivedTone?: string;
+  culturalNuance?: string;
+}
+
+export interface RefinementRequest {
+  originalMessage: string;
+  currentTranslation: string;
+  targetLanguage: string;
+  userFeedback: string;
+  conversationContext?: string;
+}
+
+export interface RefinementResult {
+  revisedTranslation: string;
+  changesExplanation: string;
+  improvementNotes: string;
 }
 
 export async function translateMessage(
@@ -42,31 +64,45 @@ export async function translateMessage(
   try {
     let systemPrompt = customSystemPrompt;
     
-    // If no custom system prompt, use default with preset context
+    // If no custom system prompt, use enhanced cultural intelligence prompt
     if (!systemPrompt) {
-      const toneGuidance = presetContext?.tone ? `Use a ${presetContext.tone} tone.` : '';
-      const culturalGuidance = presetContext?.culturalContext ? `Cultural context: ${presetContext.culturalContext}` : '';
-      const customGuidance = presetContext?.customPrompt ? `Additional instructions: ${presetContext.customPrompt}` : '';
+      const relationshipContext = presetContext?.culturalContext || 'General communication context';
+      const toneContext = presetContext?.tone || 'appropriate';
+      const additionalContext = presetContext?.customPrompt || '';
       
-      systemPrompt = `Claude, please think through this carefully.
+      systemPrompt = `You are a cultural translation assistant. Your task is to translate a message, but first, you must think through the context step-by-step to ensure the translation is culturally appropriate.
 
-I need you to translate the following message to ${targetLanguage}. Consider the cultural context, appropriate tone, and any cultural nuances that would make this message more natural and respectful in the target culture.
+Context:
+- Target Language: ${targetLanguage}
+- Relationship/Setting: ${relationshipContext}
+- Desired Tone: ${toneContext}
+${additionalContext ? `- Additional Context: ${additionalContext}` : ''}
 
-${toneGuidance}
-${culturalGuidance}
-${customGuidance}
+Your Process:
 
-<thinking>
-[Think through the cultural context, tone, and word choices]
-</thinking>
+1. Analyze Intent: First, explain what the user is trying to achieve with this message.
 
-<translation>
-[Your ${targetLanguage} translation]
-</translation>
+2. Cultural Considerations: Next, list key cultural factors that should influence the translation.
 
-<cultural_notes>
-[Explain any cultural adaptations you made and why]
-</cultural_notes>`;
+3. Translation Strategy: Based on the above, describe your translation strategy.
+
+4. Final Translation: Provide the culturally appropriate translation.
+
+Please respond in this exact format:
+
+BEGIN ANALYSIS
+
+Intent: [Explain the user's communication goal]
+
+Cultural Considerations: [List key cultural factors for ${targetLanguage}]
+
+Strategy: [Describe your translation approach]
+
+TRANSLATION:
+[Your ${targetLanguage} translation here]
+
+CULTURAL_NOTES:
+[Explain the cultural adaptations you made and why they improve communication effectiveness]`;
     } else {
       // Replace placeholders in custom system prompt
       systemPrompt = systemPrompt.replace(/\{TARGET_LANGUAGE\}/g, targetLanguage);
@@ -87,17 +123,50 @@ ${customGuidance}
       throw new Error('Expected text response from Claude');
     }
     
-    // Parse XML-structured response
-    const translationMatch = content.text.match(/<translation>([\s\S]*?)<\/translation>/);
-    const culturalNotesMatch = content.text.match(/<cultural_notes>([\s\S]*?)<\/cultural_notes>/);
-    
-    if (!translationMatch) {
+    // Parse both XML and structured text response formats
+    let translation = '';
+    let culturalNotes = '';
+    let intent = '';
+    let culturalConsiderations = '';
+    let strategy = '';
+
+    // Try new structured format first
+    const translationMatch = content.text.match(/TRANSLATION:\s*([\s\S]*?)(?:\n\nCULTURAL_NOTES:|$)/);
+    const culturalNotesMatch = content.text.match(/CULTURAL_NOTES:\s*([\s\S]*?)$/);
+    const intentMatch = content.text.match(/Intent:\s*(.*?)(?:\n\n|$)/);
+    const considerationsMatch = content.text.match(/Cultural Considerations:\s*([\s\S]*?)(?:\n\nStrategy:|$)/);
+    const strategyMatch = content.text.match(/Strategy:\s*([\s\S]*?)(?:\n\nTRANSLATION:|$)/);
+
+    if (translationMatch) {
+      // New structured format
+      translation = translationMatch[1].trim();
+      culturalNotes = culturalNotesMatch ? culturalNotesMatch[1].trim() : '';
+      intent = intentMatch ? intentMatch[1].trim() : '';
+      culturalConsiderations = considerationsMatch ? considerationsMatch[1].trim() : '';
+      strategy = strategyMatch ? strategyMatch[1].trim() : '';
+    } else {
+      // Fallback to old XML format
+      const xmlTranslationMatch = content.text.match(/<translation>([\s\S]*?)<\/translation>/);
+      const xmlCulturalNotesMatch = content.text.match(/<cultural_notes>([\s\S]*?)<\/cultural_notes>/);
+      
+      if (!xmlTranslationMatch) {
+        throw new Error('Translation not found in response');
+      }
+      
+      translation = xmlTranslationMatch[1].trim();
+      culturalNotes = xmlCulturalNotesMatch ? xmlCulturalNotesMatch[1].trim() : 'No cultural notes provided';
+    }
+
+    if (!translation) {
       throw new Error('Translation not found in response');
     }
 
     return {
-      translation: translationMatch[1].trim(),
-      culturalNotes: culturalNotesMatch ? culturalNotesMatch[1].trim() : 'No cultural notes provided'
+      translation,
+      culturalNotes,
+      intent,
+      culturalConsiderations,
+      strategy
     };
   } catch (error) {
     console.error('Translation error:', error);
@@ -112,24 +181,36 @@ export async function backTranslateMessage(
   customApiKey?: string
 ): Promise<BackTranslationResult> {
   try {
-    const userContent = `Claude, please think through this carefully.
+    const userContent = `You are a back-translation specialist. Your job is to translate the following text into English and explain what a native speaker would truly understand from it, including its tone and any hidden meanings.
 
-I need you to translate this ${targetLanguage} text back to English AND consider if there are any cultural nuances from the original English message that might have been lost or changed.
+This is an independent safety check - you should analyze the ${targetLanguage} text without being influenced by the original intent.
 
-Original English: "${originalMessage}"
-${targetLanguage} Translation: "${translation}"
+Text to Analyze:
+"${translation}"
 
-<thinking>
-[Consider both the back-translation and cultural nuances]
-</thinking>
+Provide the following:
 
-<back_translation>
-[English translation of the ${targetLanguage} text]
-</back_translation>
+Literal English Translation: [Word-for-word translation]
 
-<cultural_analysis>
-[Does the translation preserve the cultural intent of the original? Any concerns?]
-</cultural_analysis>`;
+Perceived Tone: [How would a native ${targetLanguage} speaker perceive the tone? e.g., Formal, Warm, Clinical, Respectful, etc.]
+
+Cultural Nuance: [What cultural implications, formality levels, or hidden meanings would a native speaker understand from this text?]
+
+Overall Assessment: [How would this be received by a native speaker in their cultural context?]
+
+Please respond in this exact format:
+
+LITERAL_TRANSLATION:
+[Your literal English translation]
+
+PERCEIVED_TONE:
+[Description of the tone]
+
+CULTURAL_NUANCE:
+[Analysis of cultural implications]
+
+ASSESSMENT:
+[Overall cultural assessment]`;
 
     const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
@@ -145,20 +226,118 @@ ${targetLanguage} Translation: "${translation}"
       throw new Error('Expected text response from Claude');
     }
     
-    // Parse XML-structured response
-    const backTranslationMatch = content.text.match(/<back_translation>([\s\S]*?)<\/back_translation>/);
-    const culturalAnalysisMatch = content.text.match(/<cultural_analysis>([\s\S]*?)<\/cultural_analysis>/);
-    
-    if (!backTranslationMatch) {
+    // Parse enhanced structured response format
+    let backTranslation = '';
+    let culturalAnalysis = '';
+    let literalTranslation = '';
+    let perceivedTone = '';
+    let culturalNuance = '';
+
+    // Try new structured format first
+    const literalMatch = content.text.match(/LITERAL_TRANSLATION:\s*([\s\S]*?)(?:\n\nPERCEIVED_TONE:|$)/);
+    const toneMatch = content.text.match(/PERCEIVED_TONE:\s*([\s\S]*?)(?:\n\nCULTURAL_NUANCE:|$)/);
+    const nuanceMatch = content.text.match(/CULTURAL_NUANCE:\s*([\s\S]*?)(?:\n\nASSESSMENT:|$)/);
+    const assessmentMatch = content.text.match(/ASSESSMENT:\s*([\s\S]*?)$/);
+
+    if (literalMatch) {
+      // New structured format
+      literalTranslation = literalMatch[1].trim();
+      perceivedTone = toneMatch ? toneMatch[1].trim() : '';
+      culturalNuance = nuanceMatch ? nuanceMatch[1].trim() : '';
+      backTranslation = literalTranslation; // Use literal translation as main back-translation
+      culturalAnalysis = assessmentMatch ? assessmentMatch[1].trim() : '';
+    } else {
+      // Fallback to old XML format
+      const xmlBackTranslationMatch = content.text.match(/<back_translation>([\s\S]*?)<\/back_translation>/);
+      const xmlCulturalAnalysisMatch = content.text.match(/<cultural_analysis>([\s\S]*?)<\/cultural_analysis>/);
+      
+      if (!xmlBackTranslationMatch) {
+        throw new Error('Back-translation not found in response');
+      }
+      
+      backTranslation = xmlBackTranslationMatch[1].trim();
+      culturalAnalysis = xmlCulturalAnalysisMatch ? xmlCulturalAnalysisMatch[1].trim() : 'No cultural analysis provided';
+    }
+
+    if (!backTranslation) {
       throw new Error('Back-translation not found in response');
     }
 
     return {
-      backTranslation: backTranslationMatch[1].trim(),
-      culturalAnalysis: culturalAnalysisMatch ? culturalAnalysisMatch[1].trim() : 'No cultural analysis provided'
+      backTranslation,
+      culturalAnalysis,
+      literalTranslation,
+      perceivedTone,
+      culturalNuance
     };
   } catch (error) {
     console.error('Back-translation error:', error);
     throw new Error('Failed to back-translate message: ' + (error as Error).message);
+  }
+}
+
+export async function refineTranslation(
+  originalMessage: string,
+  currentTranslation: string,
+  targetLanguage: string,
+  userFeedback: string,
+  conversationContext: string = '',
+  customApiKey?: string
+): Promise<RefinementResult> {
+  try {
+    const systemPrompt = `You are a cultural translation assistant. The user has reviewed your previous translation and provided feedback. Use this feedback to create an improved version.
+
+Context:
+- Target Language: ${targetLanguage}
+- Original message: "${originalMessage}"
+- Your previous translation: "${currentTranslation}"
+- User feedback: "${userFeedback}"
+${conversationContext ? `- Previous context: ${conversationContext}` : ''}
+
+Please provide a revised translation that incorporates the user's feedback. Explain what you changed and why.
+
+Respond in this exact format:
+
+CHANGES_EXPLANATION:
+[Explain what specific changes you made based on the feedback]
+
+REVISED_TRANSLATION:
+[Your improved ${targetLanguage} translation]
+
+IMPROVEMENT_NOTES:
+[Explain why these changes better meet the user's needs and improve cultural appropriateness]`;
+
+    const anthropic = getAnthropicClient(customApiKey);
+    const response = await anthropic.messages.create({
+      model: DEFAULT_MODEL_STR,
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: 'Please provide the refined translation based on my feedback.' }
+      ],
+      max_tokens: 800,
+    });
+
+    const content = response.content[0];
+    if (content.type !== 'text') {
+      throw new Error('Expected text response from Claude');
+    }
+    
+    // Parse structured response
+    const changesMatch = content.text.match(/CHANGES_EXPLANATION:\s*([\s\S]*?)(?:\n\nREVISED_TRANSLATION:|$)/);
+    const revisedMatch = content.text.match(/REVISED_TRANSLATION:\s*([\s\S]*?)(?:\n\nIMPROVEMENT_NOTES:|$)/);
+    const improvementMatch = content.text.match(/IMPROVEMENT_NOTES:\s*([\s\S]*?)$/);
+
+    if (!revisedMatch) {
+      throw new Error('Revised translation not found in response');
+    }
+
+    return {
+      revisedTranslation: revisedMatch[1].trim(),
+      changesExplanation: changesMatch ? changesMatch[1].trim() : '',
+      improvementNotes: improvementMatch ? improvementMatch[1].trim() : ''
+    };
+  } catch (error) {
+    console.error('Refinement error:', error);
+    throw new Error('Failed to refine translation: ' + (error as Error).message);
   }
 }

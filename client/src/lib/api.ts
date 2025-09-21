@@ -3,11 +3,33 @@
 interface TranslationResult {
   translation: string;
   culturalNotes: string;
+  // Enhanced cultural intelligence analysis
+  intent?: string;
+  culturalConsiderations?: string;
+  strategy?: string;
 }
 
 interface BackTranslationResult {
   backTranslation: string;
   culturalAnalysis: string;
+  // Enhanced safety check analysis
+  literalTranslation?: string;
+  perceivedTone?: string;
+  culturalNuance?: string;
+}
+
+interface RefinementRequest {
+  originalMessage: string;
+  currentTranslation: string;
+  targetLanguage: string;
+  userFeedback: string;
+  conversationContext?: string;
+}
+
+interface RefinementResult {
+  revisedTranslation: string;
+  changesExplanation: string;
+  improvementNotes: string;
 }
 
 interface ApiResponse<T> {
@@ -103,6 +125,30 @@ export async function generateAudio(
 
   if (!result.success || !result.data) {
     throw new Error(result.error || 'Audio generation failed');
+  }
+
+  return result.data;
+}
+
+export async function refineTranslation(
+  refinementRequest: RefinementRequest,
+  customKeys?: { anthropic: string; elevenlabs: string }
+): Promise<RefinementResult> {
+  const response = await fetch('/api/refine-translation', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...refinementRequest,
+      customKeys,
+    }),
+  });
+
+  const result: ApiResponse<RefinementResult> = await response.json();
+
+  if (!result.success || !result.data) {
+    throw new Error(result.error || 'Translation refinement failed');
   }
 
   return result.data;
