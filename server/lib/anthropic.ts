@@ -65,6 +65,15 @@ export async function translateMessage(
     // Use the target language directly since frontend now passes proper labels
     const properCaseLanguage = targetLanguage;
     
+    // DEBUG: Log what we're actually receiving
+    console.log('🔍 DEBUG translateMessage received:', {
+      message,
+      targetLanguage,
+      properCaseLanguage,
+      customSystemPrompt,
+      presetContext
+    });
+    
     
     let systemPrompt = customSystemPrompt;
     
@@ -87,6 +96,9 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
       // Replace placeholders in custom system prompt
       systemPrompt = systemPrompt.replace(/\{TARGET_LANGUAGE\}/g, targetLanguage);
     }
+
+    // DEBUG: Log the system prompt being sent
+    console.log('🎯 DEBUG System Prompt being sent to Claude:', systemPrompt);
 
     // Define the tool for structured translation response
     // Properties ordered logically to guide LLM reasoning: Analysis → Strategy → Execution → Reflection
