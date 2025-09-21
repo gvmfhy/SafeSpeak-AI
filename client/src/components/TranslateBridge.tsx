@@ -516,25 +516,25 @@ I need you to translate the following message with cultural sensitivity and appr
                   <CardHeader>
                     <h3 className="text-base font-semibold">AI Reasoning</h3>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-4">
                     {translationResult.intent && (
-                      <div>
-                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Intent:</p>
-                        <p className="text-sm text-muted-foreground">{translationResult.intent}</p>
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-md">
+                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">Communication Intent:</p>
+                        <p className="text-sm text-blue-900 dark:text-blue-100 leading-relaxed">{translationResult.intent}</p>
                       </div>
                     )}
                     
                     {translationResult.culturalConsiderations && (
-                      <div>
-                        <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Cultural Considerations:</p>
-                        <p className="text-sm text-muted-foreground">{translationResult.culturalConsiderations}</p>
+                      <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border-l-4 border-purple-500 rounded-r-md">
+                        <p className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-2">Cultural Considerations:</p>
+                        <p className="text-sm text-purple-900 dark:text-purple-100 leading-relaxed">{translationResult.culturalConsiderations}</p>
                       </div>
                     )}
                     
                     {translationResult.strategy && (
-                      <div>
-                        <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Strategy:</p>
-                        <p className="text-sm text-muted-foreground">{translationResult.strategy}</p>
+                      <div className="p-3 bg-green-50 dark:bg-green-950/30 border-l-4 border-green-500 rounded-r-md">
+                        <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">Translation Strategy:</p>
+                        <p className="text-sm text-green-900 dark:text-green-100 leading-relaxed">{translationResult.strategy}</p>
                       </div>
                     )}
                   </CardContent>
@@ -590,29 +590,36 @@ I need you to translate the following message with cultural sensitivity and appr
                   </CardHeader>
                   <CardContent>
                     {backTranslationResult ? (
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-1">Back-Translation:</p>
-                          <p className="text-sm text-muted-foreground">{backTranslationResult.backTranslation}</p>
+                      <div className="space-y-4">
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 rounded-r-md">
+                          <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">Back-Translation:</p>
+                          <p className="text-sm text-amber-900 dark:text-amber-100 leading-relaxed">{backTranslationResult.backTranslation}</p>
                         </div>
                         
                         {backTranslationResult.perceivedTone && (
-                          <div>
-                            <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mb-1">Perceived Tone:</p>
-                            <p className="text-sm text-muted-foreground">{backTranslationResult.perceivedTone}</p>
+                          <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-md">
+                            <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">Perceived Tone:</p>
+                            <p className="text-sm text-blue-900 dark:text-blue-100 leading-relaxed">{backTranslationResult.perceivedTone}</p>
                           </div>
                         )}
                         
                         {backTranslationResult.culturalNuance && (
-                          <div>
-                            <p className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-1">Cultural Nuance:</p>
-                            <p className="text-sm text-muted-foreground">{backTranslationResult.culturalNuance}</p>
+                          <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border-l-4 border-rose-500 rounded-r-md">
+                            <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-2">Cultural Nuance:</p>
+                            <p className="text-sm text-rose-900 dark:text-rose-100 leading-relaxed">{backTranslationResult.culturalNuance}</p>
+                          </div>
+                        )}
+                        
+                        {backTranslationResult.culturalAnalysis && (
+                          <div className="p-3 bg-slate-50 dark:bg-slate-950/30 border-l-4 border-slate-500 rounded-r-md">
+                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Overall Assessment:</p>
+                            <p className="text-sm text-slate-900 dark:text-slate-100 leading-relaxed">{backTranslationResult.culturalAnalysis}</p>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="p-4 bg-muted/30 rounded-md">
-                        <p className="text-sm text-muted-foreground">
+                      <div className="p-4 bg-slate-50 dark:bg-slate-950/30 border-l-4 border-slate-300 dark:border-slate-600 rounded-r-md">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
                           {isBackTranslating ? "Running safety check..." : "Safety check will run automatically"}
                         </p>
                       </div>
