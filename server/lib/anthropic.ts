@@ -291,42 +291,105 @@ ASSESSMENT:
       throw new Error('Expected text response from Claude');
     }
     
-    // Parse enhanced structured response format
+    // Robust parsing for back-translation response
+    const responseText = content.text;
     let backTranslation = '';
     let culturalAnalysis = '';
     let literalTranslation = '';
     let perceivedTone = '';
     let culturalNuance = '';
 
-    // Try new structured format first
-    const literalMatch = content.text.match(/LITERAL_TRANSLATION:\s*([\s\S]*?)(?:\n\nPERCEIVED_TONE:|$)/);
-    const toneMatch = content.text.match(/PERCEIVED_TONE:\s*([\s\S]*?)(?:\n\nCULTURAL_NUANCE:|$)/);
-    const nuanceMatch = content.text.match(/CULTURAL_NUANCE:\s*([\s\S]*?)(?:\n\nASSESSMENT:|$)/);
-    const assessmentMatch = content.text.match(/ASSESSMENT:\s*([\s\S]*?)$/);
+    // Multiple patterns for each field
+    const literalPatterns = [
+      /Literal\s+English\s+Translation:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /LITERAL_TRANSLATION:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /Literal:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /Word-for-word:\s*([\s\S]*?)(?:\n\n|$)/i
+    ];
 
-    if (literalMatch) {
-      // New structured format
-      literalTranslation = literalMatch[1].trim();
-      perceivedTone = toneMatch ? toneMatch[1].trim() : '';
-      culturalNuance = nuanceMatch ? nuanceMatch[1].trim() : '';
-      backTranslation = literalTranslation; // Use literal translation as main back-translation
-      culturalAnalysis = assessmentMatch ? assessmentMatch[1].trim() : '';
-    } else {
-      // Fallback to old XML format
-      const xmlBackTranslationMatch = content.text.match(/<back_translation>([\s\S]*?)<\/back_translation>/);
-      const xmlCulturalAnalysisMatch = content.text.match(/<cultural_analysis>([\s\S]*?)<\/cultural_analysis>/);
-      
-      if (!xmlBackTranslationMatch) {
-        throw new Error('Back-translation not found in response');
+    const tonePatterns = [
+      /Perceived\s+Tone:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /PERCEIVED_TONE:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /Tone:\s*([\s\S]*?)(?:\n\n|$)/i
+    ];
+
+    const nuancePatterns = [
+      /Cultural\s+Nuance:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /CULTURAL_NUANCE:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /Cultural\s+implications?:\s*([\s\S]*?)(?:\n\n|$)/i
+    ];
+
+    const assessmentPatterns = [
+      /Overall\s+Assessment:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /ASSESSMENT:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /Assessment:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /Reception:\s*([\s\S]*?)(?:\n\n|$)/i
+    ];
+
+    // Extract each field
+    for (const pattern of literalPatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1].trim()) {
+        literalTranslation = match[1].trim();
+        break;
       }
-      
-      backTranslation = xmlBackTranslationMatch[1].trim();
-      culturalAnalysis = xmlCulturalAnalysisMatch ? xmlCulturalAnalysisMatch[1].trim() : 'No cultural analysis provided';
+    }
+
+    for (const pattern of tonePatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1].trim()) {
+        perceivedTone = match[1].trim();
+        break;
+      }
+    }
+
+    for (const pattern of nuancePatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1].trim()) {
+        culturalNuance = match[1].trim();
+        break;
+      }
+    }
+
+    for (const pattern of assessmentPatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1].trim()) {
+        culturalAnalysis = match[1].trim();
+        break;
+      }
+    }
+
+    // Use literal translation as primary back-translation, with fallbacks
+    backTranslation = literalTranslation;
+    
+    if (!backTranslation) {
+      // Try XML format fallback
+      const xmlMatch = responseText.match(/<back_translation>([\s\S]*?)<\/back_translation>/i);
+      if (xmlMatch) {
+        backTranslation = xmlMatch[1].trim();
+      }
     }
 
     if (!backTranslation) {
-      throw new Error('Back-translation not found in response');
+      // Try to extract any reasonable English text
+      const fallbackPatterns = [
+        /(?:Back|Return)\s+translation:\s*(.*?)(?:\n|$)/i,
+        /In\s+English:\s*(.*?)(?:\n|$)/i,
+        /Translation:\s*(.*?)(?:\n|$)/i
+      ];
+      
+      for (const pattern of fallbackPatterns) {
+        const match = responseText.match(pattern);
+        if (match && match[1].trim()) {
+          backTranslation = match[1].trim();
+          break;
+        }
+      }
     }
+
+    // Set defaults if still missing
+    backTranslation = backTranslation || 'Back-translation not provided';
+    culturalAnalysis = culturalAnalysis || 'Cultural analysis not provided';
 
     return {
       backTranslation,
