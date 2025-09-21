@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { MessageSquare, Settings, Pencil, Check, X, Play, Download, RotateCcw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from "./ThemeToggle";
-import { translateMessage, backTranslateMessage } from "@/lib/api";
+import { translateMessage, backTranslateMessage, generateAudio } from "@/lib/api";
 
 export function TranslateBridge() {
   // Application state - single page, no steps
@@ -37,6 +37,10 @@ export function TranslateBridge() {
   const [isEditingTranslation, setIsEditingTranslation] = useState(false);
   const [editedTranslation, setEditedTranslation] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  // Audio ref for playback
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const languages = [
     { value: "spanish", label: "Spanish" },
@@ -92,12 +96,16 @@ export function TranslateBridge() {
     if (!translationResult) return;
     
     setIsGeneratingAudio(true);
+    setError(null);
     
-    // todo: replace with actual ElevenLabs API call
-    setTimeout(() => {
-      setAudioUrl("mock-audio-url");
+    try {
+      const result = await generateAudio(translationResult.translation, targetLanguage);
+      setAudioUrl(result.audioUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Audio generation failed');
+    } finally {
       setIsGeneratingAudio(false);
-    }, 2500);
+    }
   };
 
   const handleStartOver = () => {
@@ -107,6 +115,13 @@ export function TranslateBridge() {
     setAudioUrl(null);
     setIsEditingTranslation(false);
     setError(null);
+    setIsPlaying(false);
+    
+    // Stop any playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
   };
 
   const handleEditTranslation = () => {
@@ -131,6 +146,33 @@ export function TranslateBridge() {
   const handleCancelEdit = () => {
     setIsEditingTranslation(false);
     setEditedTranslation("");
+  };
+
+  const handlePlayAudio = () => {
+    if (!audioRef.current || !audioUrl) return;
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+  };
+
+  const handleDownloadAudio = () => {
+    if (!audioUrl || !translationResult) return;
+    
+    const link = document.createElement('a');
+    link.href = audioUrl;
+    link.download = `translation-${targetLanguage}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -359,10 +401,26 @@ export function TranslateBridge() {
                 </div>
                 
                 <div className="flex items-center justify-center space-x-4">
-                  <Button size="lg" className="w-16 h-16 rounded-full p-0">
-                    <Play className="w-6 h-6 ml-0.5" />
+                  <Button 
+                    size="lg" 
+                    className="w-16 h-16 rounded-full p-0"
+                    onClick={handlePlayAudio}
+                    disabled={!audioUrl}
+                    data-testid="button-play-audio"
+                  >
+                    {isPlaying ? (
+                      <div className="w-6 h-6 border-2 border-primary-foreground rounded-sm" />
+                    ) : (
+                      <Play className="w-6 h-6 ml-0.5" />
+                    )}
                   </Button>
-                  <Button variant="outline" className="hover-elevate">
+                  <Button 
+                    variant="outline" 
+                    className="hover-elevate"
+                    onClick={handleDownloadAudio}
+                    disabled={!audioUrl}
+                    data-testid="button-download-audio"
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     Download
                   </Button>
@@ -371,6 +429,16 @@ export function TranslateBridge() {
                     Start Over
                   </Button>
                 </div>
+                
+                {/* Hidden audio element for playback */}
+                {audioUrl && (
+                  <audio
+                    ref={audioRef}
+                    src={audioUrl}
+                    onEnded={handleAudioEnded}
+                    className="hidden"
+                  />
+                )}
               </CardContent>
             </Card>
           )}

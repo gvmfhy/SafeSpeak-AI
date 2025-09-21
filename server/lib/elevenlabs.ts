@@ -12,7 +12,7 @@ interface GenerateAudioResponse {
 class ElevenLabsService {
   private apiKey: string;
   private baseUrl = 'https://api.elevenlabs.io/v1';
-  private defaultVoiceId = 'ErXwobaYiN019PkySvjV'; // Default voice suitable for healthcare
+  private defaultVoiceId = 'ErXwobaYiN019PkySvjV'; // Default voice suitable for general communication
   private defaultModel = 'eleven_multilingual_v2';
 
   constructor(options: ElevenLabsOptions) {
@@ -46,7 +46,7 @@ class ElevenLabsService {
           text: text,
           model_id: this.defaultModel,
           voice_settings: {
-            stability: 0.75, // Good for medical content - clear and consistent
+            stability: 0.75, // Clear and consistent for communication
             similarity_boost: 0.75, // Maintain natural voice characteristics
             style: 0.25, // Less dramatic, more professional
             use_speaker_boost: true // Enhance clarity

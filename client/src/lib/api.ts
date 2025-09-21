@@ -65,3 +65,31 @@ export async function backTranslateMessage(
 
   return result.data;
 }
+
+interface AudioResult {
+  audioUrl: string;
+}
+
+export async function generateAudio(
+  text: string,
+  language: string
+): Promise<AudioResult> {
+  const response = await fetch('/api/generate-audio', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text,
+      language,
+    }),
+  });
+
+  const result: ApiResponse<AudioResult> = await response.json();
+
+  if (!result.success || !result.data) {
+    throw new Error(result.error || 'Audio generation failed');
+  }
+
+  return result.data;
+}
