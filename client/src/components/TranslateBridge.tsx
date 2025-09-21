@@ -562,83 +562,6 @@ I need you to translate the following message with cultural sensitivity and appr
                   <p className="text-sm">{translationResult.culturalNotes}</p>
                 </div>
                 
-                {/* Refinement Controls */}
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowRefinement(!showRefinement)}
-                    data-testid="button-refine-translation"
-                  >
-                    <MessageSquare className="w-3 h-3 mr-1" />
-                    {showRefinement ? 'Hide Refinement' : 'Refine Translation'}
-                  </Button>
-                </div>
-                
-                {/* Refinement Panel */}
-                {showRefinement && (
-                  <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md space-y-3">
-                    <h4 className="text-sm font-medium text-orange-800 dark:text-orange-200">Provide feedback to refine the translation:</h4>
-                    <Textarea
-                      value={refinementFeedback}
-                      onChange={(e) => setRefinementFeedback(e.target.value)}
-                      placeholder="e.g., 'Make it sound warmer and more personal' or 'Use more formal language'"
-                      className="min-h-16"
-                      data-testid="textarea-refinement-feedback"
-                    />
-                    <Button
-                      onClick={handleRefine}
-                      disabled={!refinementFeedback.trim() || isRefining}
-                      size="sm"
-                      data-testid="button-submit-refinement"
-                    >
-                      {isRefining ? 'Refining...' : 'Get Refined Translation'}
-                    </Button>
-                  </div>
-                )}
-                
-                {/* Refinement Result */}
-                {refinementResult && (
-                  <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md space-y-3">
-                    <h4 className="text-sm font-medium text-green-800 dark:text-green-200">Refined Translation:</h4>
-                    
-                    <div className="p-3 bg-white dark:bg-gray-900 border rounded-md">
-                      <p className="text-base leading-relaxed">{refinementResult.revisedTranslation}</p>
-                    </div>
-                    
-                    <div className="text-sm space-y-2">
-                      <div>
-                        <p className="font-medium text-green-800 dark:text-green-200">Changes Made:</p>
-                        <p className="text-green-700 dark:text-green-300">{refinementResult.changesExplanation}</p>
-                      </div>
-                      
-                      <div>
-                        <p className="font-medium text-green-800 dark:text-green-200">Improvement Notes:</p>
-                        <p className="text-green-700 dark:text-green-300">{refinementResult.improvementNotes}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex space-x-2">
-                      <Button
-                        onClick={handleUseRefinedTranslation}
-                        size="sm"
-                        data-testid="button-use-refined"
-                      >
-                        <Check className="w-3 h-3 mr-1" />
-                        Use This Translation
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRefinementResult(null)}
-                        data-testid="button-discard-refined"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        Discard
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           )}
@@ -701,33 +624,107 @@ I need you to translate the following message with cultural sensitivity and appr
                   </div>
                 </div>
 
+                {/* Action Box - Matches Wireframe Step 4 */}
+                <div className="p-4 bg-card border border-card-border rounded-md">
+                  <h4 className="text-sm font-semibold mb-3">Action</h4>
+                  
+                  {/* Refine It? Section */}
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium">Refine It?</label>
+                      <Textarea
+                        value={refinementFeedback}
+                        onChange={(e) => setRefinementFeedback(e.target.value)}
+                        placeholder="e.g., 'Make it more formal' or 'Add politeness markers'"
+                        className="flex-1 min-h-[60px] resize-none"
+                        data-testid="textarea-refine-feedback"
+                      />
+                      <Button
+                        onClick={handleRefine}
+                        disabled={!refinementFeedback.trim() || isRefining}
+                        variant="outline"
+                        data-testid="button-revise"
+                      >
+                        {isRefining ? 'Revising...' : 'Revise'}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Approve & Send to ElevenLabs */}
+                  <div className="flex space-x-3">
+                    <Button
+                      onClick={handleStartOver}
+                      variant="outline"
+                      className="flex-1"
+                      disabled={isGeneratingAudio}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Start Over
+                    </Button>
+                    <Button
+                      onClick={handleApprove}
+                      className="flex-1"
+                      disabled={isGeneratingAudio}
+                      data-testid="button-approve"
+                    >
+                      {isGeneratingAudio ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                          <span>Generating Audio...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 mr-2" />
+                          Approve & Send to ElevenLabs
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Refinement Result */}
+          {refinementResult && (
+            <Card>
+              <CardHeader>
+                <h3 className="text-base font-semibold">Refined Translation</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
+                  <p className="text-base leading-relaxed font-medium">{refinementResult.revisedTranslation}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="p-3 bg-muted/30 rounded-md">
+                    <p className="font-medium text-foreground mb-1">Changes Made:</p>
+                    <p className="text-muted-foreground">{refinementResult.changesExplanation}</p>
+                  </div>
+                  
+                  <div className="p-3 bg-muted/30 rounded-md">
+                    <p className="font-medium text-foreground mb-1">Improvement Notes:</p>
+                    <p className="text-muted-foreground">{refinementResult.improvementNotes}</p>
+                  </div>
+                </div>
+                
                 <div className="flex space-x-3">
                   <Button
-                    onClick={handleStartOver}
-                    variant="outline"
+                    onClick={handleUseRefinedTranslation}
                     className="flex-1"
-                    disabled={isGeneratingAudio}
+                    data-testid="button-use-refined"
                   >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Start Over
+                    <Check className="w-4 h-4 mr-2" />
+                    Use This Translation
                   </Button>
                   <Button
-                    onClick={handleApprove}
+                    onClick={() => setRefinementResult(null)}
+                    variant="outline"
                     className="flex-1"
-                    disabled={isGeneratingAudio}
-                    data-testid="button-approve"
+                    data-testid="button-discard-refined"
                   >
-                    {isGeneratingAudio ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                        <span>Generating Audio...</span>
-                      </div>
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Generate Audio
-                      </>
-                    )}
+                    <X className="w-4 h-4 mr-2" />
+                    Discard
                   </Button>
                 </div>
               </CardContent>
