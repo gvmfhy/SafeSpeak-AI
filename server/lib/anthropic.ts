@@ -9,7 +9,10 @@ When copying code from this code snippet, ensure you also include this informati
 */
 
 // <important_do_not_delete>
-const DEFAULT_MODEL_STR = "claude-sonnet-4-20250514";
+// Model tiering for performance optimization
+const TRANSLATION_MODEL = "claude-sonnet-4-20250514"; // High accuracy for main translation
+const ANALYSIS_MODEL = "claude-3-5-haiku-20241022"; // Fastest available model for back-translation & refinement  
+const DEFAULT_MODEL_STR = TRANSLATION_MODEL; // Legacy compatibility
 // </important_do_not_delete>
 
 const getAnthropicClient = (customApiKey?: string) => {
@@ -129,7 +132,7 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
 
     const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
-      model: DEFAULT_MODEL_STR,
+      model: TRANSLATION_MODEL, // Use high-accuracy Sonnet for main translation
       system: systemPrompt,
       messages: [
         { role: 'user', content: message }
@@ -225,7 +228,7 @@ Provide a literal English translation, analyze the perceived tone, identify cult
 
     const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
-      model: DEFAULT_MODEL_STR,
+      model: ANALYSIS_MODEL, // Use faster Haiku for back-translation analysis
       system: systemPrompt,
       messages: [
         { role: 'user', content: 'Please analyze the provided text using the submit_back_translation tool.' }
@@ -301,7 +304,7 @@ IMPROVEMENT_NOTES:
 
     const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
-      model: DEFAULT_MODEL_STR,
+      model: ANALYSIS_MODEL, // Use faster Haiku for refinement
       system: systemPrompt,
       messages: [
         { role: 'user', content: 'Please provide the refined translation based on my feedback.' }
