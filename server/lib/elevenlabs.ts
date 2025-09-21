@@ -12,7 +12,7 @@ interface GenerateAudioResponse {
 class ElevenLabsService {
   private apiKey: string;
   private baseUrl = 'https://api.elevenlabs.io/v1';
-  private defaultVoiceId = '21m00Tcm4TlvDq8ikWAM'; // Rachel - v3 creative expressive voice
+  private defaultVoiceId = 'JBFqnCBsd6RMkjVDRZzb'; // v3 optimized creative voice
   private defaultModel = 'eleven_v3'; // v3 creative model for maximum expressiveness
 
   constructor(options: ElevenLabsOptions) {

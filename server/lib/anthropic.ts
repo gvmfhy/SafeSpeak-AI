@@ -164,7 +164,7 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
           // 3. EXECUTION FIELD (The "What")
           translation: {
             type: "string",
-            description: "The final, culturally appropriate translation."
+            description: "The accurate translation reflecting the original meaning and tone."
           },
           // 4. EXPLANATION FIELD (The "Reflection")
           cultural_notes: {
