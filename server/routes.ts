@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { translateMessage, backTranslateMessage } from "./lib/anthropic";
+import { translateMessage, backTranslateMessage, refineTranslation } from "./lib/anthropic";
 import { ElevenLabsService } from "./lib/elevenlabs";
 import { z } from "zod";
 
@@ -34,6 +34,18 @@ const backTranslateSchema = z.object({
 const generateAudioSchema = z.object({
   text: z.string().min(1),
   language: z.string().min(1),
+  customKeys: z.object({
+    anthropic: z.string(),
+    elevenlabs: z.string(),
+  }).optional()
+});
+
+const refineTranslationSchema = z.object({
+  originalMessage: z.string().min(1),
+  currentTranslation: z.string().min(1),
+  targetLanguage: z.string().min(1),
+  userFeedback: z.string().min(1),
+  conversationContext: z.string().optional(),
   customKeys: z.object({
     anthropic: z.string(),
     elevenlabs: z.string(),
@@ -108,6 +120,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Audio generation failed'
+      });
+    }
+  });
+
+  // Translation refinement endpoint
+  app.post('/api/refine-translation', async (req, res) => {
+    try {
+      const { originalMessage, currentTranslation, targetLanguage, userFeedback, conversationContext, customKeys } = refineTranslationSchema.parse(req.body);
+      
+      const result = await refineTranslation(
+        originalMessage, 
+        currentTranslation, 
+        targetLanguage, 
+        userFeedback, 
+        conversationContext || '', 
+        customKeys?.anthropic
+      );
+      
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('Refinement error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Translation refinement failed'
       });
     }
   });
