@@ -140,7 +140,10 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
     });
 
     // Use Tool Calling for reliable structured response
+    console.log('Raw Claude response:', JSON.stringify(response, null, 2));
+    
     const toolCall = response.content.find(contentBlock => contentBlock.type === "tool_use");
+    console.log('Found tool call:', JSON.stringify(toolCall, null, 2));
 
     if (!toolCall || toolCall.name !== 'submit_translation') {
       throw new Error("Expected the AI to use the 'submit_translation' tool.");

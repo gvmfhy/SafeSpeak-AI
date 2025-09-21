@@ -51,7 +51,7 @@ class ElevenLabsService {
           model_id: this.defaultModel,
           language_code: languageCode,
           voice_settings: {
-            stability: 0.3, // Creative mode for maximum v3 expressiveness
+            stability: 0.0, // Creative mode for maximum v3 expressiveness
             similarity_boost: 0.8, // Higher similarity for v3
             style: 0.2, // Enhanced style for v3
             use_speaker_boost: true // Enhanced clarity
