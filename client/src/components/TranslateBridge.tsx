@@ -86,6 +86,7 @@ I need you to translate the following message with cultural sensitivity and appr
   const languages = [
     { value: "spanish", label: "Spanish" },
     { value: "mandarin", label: "Mandarin Chinese" },
+    { value: "japanese", label: "Japanese" },
     { value: "arabic", label: "Arabic" },
     { value: "french", label: "French" },
     { value: "portuguese", label: "Portuguese" },
