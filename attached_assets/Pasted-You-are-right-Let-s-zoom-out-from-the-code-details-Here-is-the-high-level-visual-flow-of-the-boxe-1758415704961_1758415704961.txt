@@ -1,0 +1,89 @@
+You are right. Let's zoom out from the code details. Here is the high-level visual flow of the "boxes" and the logic behind them.
+
+This is the entire process from start to finish, viewed as a simple flowchart.
+
+### High-Level Visual Flow & Logic
+Step 1: The User Starts
+
+The screen begins with just one active area.
+
+┌──────────────────────────────┐
+│                              │
+│  [ The User's Input Box ]    │
+│  (Message + Context)         │
+│                              │
+└──────────────┬───────────────┘
+               │
+               │ User clicks "Get Smart Translation"
+               ▼
+Step 2: The AI Processes (The "Automation")
+
+When the button is clicked, two things happen in parallel under the hood.
+
+┌──────────────────────────────┐          ┌──────────────────────────┐
+│   AI Task #1 (Smart Prompt)  │──┐      │ AI Task #2 (Safety Check)│
+│  - Reads Context             │  │      │ - Gets ONLY the text     │
+│  - Thinks Step-by-Step       │  │      │ - Does a "blind" back-   │
+│  - Generates Reasoning       │  │      │   translation            │
+│  - Generates Translation     │  │      │ - Analyzes Tone/Nuance   │
+└──────────────┬───────────────┘  │      └───────────┬──────────────┘
+               │                  │                  │
+               └─────────┐  ┌─────┘                  │
+                         ▼  ▼                         ▼
+Step 3: The User Reviews (The "Human QC")
+
+The results from the AI's processing now populate the three main output "boxes" on the screen. This is the core review step.
+
+┌────────────────┐  ┌────────────────┐  ┌────────────────┐
+│                │  │                │  │                │
+│ [ AI Reasoning ] │  │ [ Translation  ] │  │ [ Safety Check ] │
+│ (Visible by    │  │ (The final text) │  │ (The blind     │
+│  default)      │  │                │  │  verification) │
+│                │  │                │  │                │
+└────────────────┘  └────────────────┘  └────────────────┘
+                           │
+                           ▼
+Step 4: The User Acts
+
+Based on the review, the user now has a clear choice in the "Action" box.
+
+┌───────────────────────────────────────────┐
+│              [ Action Box ]               │
+│                                           │
+│  [Refine It?]  textbox + [Revise] button  │
+│                                           │
+│  [Approve & Send to ElevenLabs] button    │
+│                                           │
+└────────────────────┬──────────────────────┘
+                     │
+                     ▼
+The Logic of the Loop:
+
+If the user clicks [Approve & Send], the flow ends. The text is sent to the TTS service.
+
+If the user types in the [Refine It?] box and clicks [Revise], the process loops back to Step 2. The AI re-processes the request, using the user's new feedback plus all the original context. This creates a new version.
+
+## How the History Fits In
+Each time the refinement loop runs, it creates a snapshot.
+
+The Version Navigator (‹ V2 of 2 ›) on the main screen lets you quickly switch between these snapshots.
+
+The Refinement History view shows the entire chain of these loops in a single log:
+
+┌───────────────────────┐
+│     HISTORY LOG       │
+│                       │
+│  ┌─────────────────┐  │
+│  │    Version 1    │  │
+│  └─────────────────┘  │
+│           ↓           │
+│    [Your Feedback]    │
+│           ↓           │
+│  ┌─────────────────┐  │
+│  │    Version 2    │  │
+│  └─────────────────┘  │
+│           ↓           │
+│         ...etc        │
+│                       │
+└───────────────────────┘
+This high-level flow ensures that Automation (Step 2) is always followed by Human QC (Step 3), which then leads to a clear Action (Step 4), creating a safe and powerful loop.

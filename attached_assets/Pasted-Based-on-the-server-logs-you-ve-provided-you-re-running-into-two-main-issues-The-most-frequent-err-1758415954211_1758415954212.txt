@@ -1,0 +1,71 @@
+Based on the server logs you've provided, you're running into two main issues. The most frequent error is with parsing the AI's translation response, and the second is a simple configuration error for the audio generation.
+
+Here’s a breakdown of what's happening and how to fix it.
+
+-----
+
+### \#\# Problem 1: "Translation not found in response" (The Main Bug)
+
+This is the error causing your `/api/translate` endpoint to fail intermittently with a `500` error.
+
+**What's Happening:** Your server code (`anthropic.ts`, line 153) is successfully receiving a response from the AI. However, your code is then trying to find the specific text that comes after the `TRANSLATION:` label in that response and is failing. This happens because Large Language Models (LLMs) can sometimes have slight variations in their output.
+
+For example, the AI might output:
+
+  * `translation:` (lowercase)
+  * `TRANSLATION :` (with a space before the colon)
+  * Or it might add an extra line break.
+
+Your current parsing logic is likely too strict and breaks if the output isn't a perfect, character-for-character match of the format you expect.
+
+**How to Fix It (The Recommended Solution):**
+
+Make your parsing logic more flexible. Instead of looking for an exact string, use a case-insensitive regular expression to find the translated text.
+
+Here is an example of how you could modify your TypeScript code in `server/lib/anthropic.ts`:
+
+```typescript
+// Inside your translateMessage function...
+
+// OLD, BRITTLE WAY (What you might have now)
+// const parts = response.split("TRANSLATION:");
+// if (parts.length < 2) {
+//   throw new Error("Translation not found in response");
+// }
+// const translation = parts[1].trim();
+
+
+// NEW, ROBUST WAY
+const match = response.match(/TRANSLATION:\s*([\s\S]*)/i);
+
+if (!match || !match[1]) {
+  console.error("Failed to parse response:", response); // Log the full response for debugging
+  throw new Error("Translation not found in response");
+}
+
+const translation = match[1].trim();
+// Now 'translation' will contain the text regardless of casing or extra spaces.
+```
+
+  * The `/i` flag makes the search for "TRANSLATION:" **case-insensitive**.
+  * `\s*` handles any potential whitespace (spaces, newlines) after the colon.
+
+-----
+
+### \#\# Problem 2: "ElevenLabs API key not configured" (Configuration Error)
+
+This is the error causing your `/api/generate-audio` endpoint to fail.
+
+**What's Happening:** This one is straightforward. The error message is telling you exactly what's wrong. Your code is trying to make a request to the ElevenLabs API, but it can't find the API key it needs to authenticate.
+
+**How to Fix It:**
+
+You need to set your ElevenLabs API key as an environment variable so your server can access it. If you are using a `.env` file for local development or Replit "Secrets," make sure you have an entry like this:
+
+```
+ELEVENLABS_API_KEY="sk_your_elevenlabs_api_key_here"
+```
+
+Ensure your code in `server/routes.ts` (around line 103) is correctly loading this environment variable before trying to use it.
+
+By fixing the parsing logic and adding your API key, you should resolve all the errors shown in your log.

@@ -123,6 +123,10 @@ CULTURAL_NOTES:
       throw new Error('Expected text response from Claude');
     }
     
+    console.log('=== CLAUDE RESPONSE DEBUG ===');
+    console.log(content.text);
+    console.log('=== END DEBUG ===');
+    
     // Parse both XML and structured text response formats
     let translation = '';
     let culturalNotes = '';
@@ -130,31 +134,92 @@ CULTURAL_NOTES:
     let culturalConsiderations = '';
     let strategy = '';
 
-    // Try new structured format first
-    const translationMatch = content.text.match(/TRANSLATION:\s*([\s\S]*?)(?:\n\nCULTURAL_NOTES:|$)/);
-    const culturalNotesMatch = content.text.match(/CULTURAL_NOTES:\s*([\s\S]*?)$/);
-    const intentMatch = content.text.match(/Intent:\s*(.*?)(?:\n\n|$)/);
-    const considerationsMatch = content.text.match(/Cultural Considerations:\s*([\s\S]*?)(?:\n\nStrategy:|$)/);
-    const strategyMatch = content.text.match(/Strategy:\s*([\s\S]*?)(?:\n\nTRANSLATION:|$)/);
+    // Robust parsing to handle various Claude response formats
+    const responseText = content.text;
+    
+    // Try multiple patterns for translation extraction
+    const translationPatterns = [
+      /TRANSLATION:\s*\n+([\s\S]*?)(?:\n\s*$|\n\s*[A-Z_]+:|$)/i,
+      /TRANSLATION:\s*([\s\S]*?)(?:\n\n|$)/i,
+      /<translation>([\s\S]*?)<\/translation>/i,
+      /(?:Final\s+)?Translation:\s*(.*?)(?:\n|$)/i,
+      /(?:In\s+\w+|Translated):\s*(.*?)(?:\n|$)/i
+    ];
+    
+    const intentPatterns = [
+      /Intent:\s*(.*?)(?:\n\n|\n(?=[A-Z])|\n\s*$)/i,
+      /(?:Communication\s+)?Intent:\s*(.*?)(?:\n|$)/i
+    ];
+    
+    const considerationsPatterns = [
+      /Cultural\s+Considerations?:\s*([\s\S]*?)(?:\n\n(?:Strategy|TRANSLATION)|$)/i,
+      /Cultural\s+(?:factors?|notes?):\s*([\s\S]*?)(?:\n\n|$)/i
+    ];
+    
+    const strategyPatterns = [
+      /Strategy:\s*([\s\S]*?)(?:\n\n(?:TRANSLATION|Final)|$)/i,
+      /Translation\s+Strategy:\s*([\s\S]*?)(?:\n\n|$)/i
+    ];
 
-    if (translationMatch) {
-      // New structured format
-      translation = translationMatch[1].trim();
-      culturalNotes = culturalNotesMatch ? culturalNotesMatch[1].trim() : '';
-      intent = intentMatch ? intentMatch[1].trim() : '';
-      culturalConsiderations = considerationsMatch ? considerationsMatch[1].trim() : '';
-      strategy = strategyMatch ? strategyMatch[1].trim() : '';
-    } else {
-      // Fallback to old XML format
-      const xmlTranslationMatch = content.text.match(/<translation>([\s\S]*?)<\/translation>/);
-      const xmlCulturalNotesMatch = content.text.match(/<cultural_notes>([\s\S]*?)<\/cultural_notes>/);
-      
-      if (!xmlTranslationMatch) {
-        throw new Error('Translation not found in response');
+    // Extract translation with multiple attempts
+    for (const pattern of translationPatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1].trim()) {
+        translation = match[1].trim();
+        break;
       }
+    }
+
+    // Extract other components
+    for (const pattern of intentPatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1].trim()) {
+        intent = match[1].trim();
+        break;
+      }
+    }
+
+    for (const pattern of considerationsPatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1].trim()) {
+        culturalConsiderations = match[1].trim();
+        break;
+      }
+    }
+
+    for (const pattern of strategyPatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1].trim()) {
+        strategy = match[1].trim();
+        break;
+      }
+    }
+
+    // Combine cultural notes
+    culturalNotes = [
+      intent && `Intent: ${intent}`,
+      culturalConsiderations && `Cultural Considerations: ${culturalConsiderations}`,
+      strategy && `Strategy: ${strategy}`
+    ].filter(Boolean).join('\n\n') || 'No detailed analysis provided';
+
+    // If still no translation found, try a more flexible approach
+    if (!translation) {
+      console.log('Claude Response:', content.text); // Debug log
       
-      translation = xmlTranslationMatch[1].trim();
-      culturalNotes = xmlCulturalNotesMatch ? xmlCulturalNotesMatch[1].trim() : 'No cultural notes provided';
+      // Look for any text after common translation indicators
+      const fallbackPatterns = [
+        /(?:Translation|Translated|In\s+\w+):\s*([^\n]+)/i,
+        /([^.!?]+[.!?])/g // Just grab the first sentence as a last resort
+      ];
+      
+      for (const pattern of fallbackPatterns) {
+        const match = content.text.match(pattern);
+        if (match) {
+          translation = Array.isArray(match) ? match[0] : match[1];
+          translation = translation.trim();
+          break;
+        }
+      }
     }
 
     if (!translation) {

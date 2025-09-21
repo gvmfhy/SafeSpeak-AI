@@ -493,193 +493,182 @@ I need you to translate the following message with cultural sensitivity and appr
             </CardContent>
           </Card>
 
-          {/* Translation Result */}
+          {/* Step 3: Human QC - Three Boxes Layout */}
           {translationResult && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <h3 className="text-base font-semibold">Translation</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleEditTranslation}
-                  disabled={isEditingTranslation}
-                  className="hover-elevate"
-                  data-testid="button-edit-translation"
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {isEditingTranslation ? (
-                  <div className="space-y-3">
-                    <Textarea
-                      value={editedTranslation}
-                      onChange={(e) => setEditedTranslation(e.target.value)}
-                      className="min-h-16"
-                      data-testid="textarea-edit-translation"
-                    />
-                    <div className="flex space-x-2">
-                      <Button size="sm" onClick={handleSaveEdit} data-testid="button-save-edit">
-                        <Check className="w-3 h-3 mr-1" />
-                        Save
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-                        <X className="w-3 h-3 mr-1" />
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-secondary/10 border border-secondary/20 rounded-md">
-                    <p className="text-base leading-relaxed">{translationResult.translation}</p>
-                  </div>
-                )}
-                
-                {/* Enhanced Cultural Analysis */}
-                {translationResult.intent && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">Communication Intent:</p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">{translationResult.intent}</p>
-                  </div>
-                )}
-                
-                {translationResult.culturalConsiderations && (
-                  <div className="p-3 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-md">
-                    <p className="text-sm font-medium text-purple-800 dark:text-purple-200 mb-1">Cultural Considerations:</p>
-                    <p className="text-sm text-purple-700 dark:text-purple-300">{translationResult.culturalConsiderations}</p>
-                  </div>
-                )}
-                
-                {translationResult.strategy && (
-                  <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Translation Strategy:</p>
-                    <p className="text-sm text-green-700 dark:text-green-300">{translationResult.strategy}</p>
-                  </div>
-                )}
-                
-                <div className="p-3 bg-accent/30 rounded-md">
-                  <p className="text-sm text-muted-foreground mb-1">Cultural Notes:</p>
-                  <p className="text-sm">{translationResult.culturalNotes}</p>
-                </div>
-                
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-center">Step 3: Human Quality Check</h2>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* AI Reasoning Box (Visible by default) */}
+                <Card>
+                  <CardHeader>
+                    <h3 className="text-base font-semibold">AI Reasoning</h3>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {translationResult.intent && (
+                      <div>
+                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Intent:</p>
+                        <p className="text-sm text-muted-foreground">{translationResult.intent}</p>
+                      </div>
+                    )}
+                    
+                    {translationResult.culturalConsiderations && (
+                      <div>
+                        <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Cultural Considerations:</p>
+                        <p className="text-sm text-muted-foreground">{translationResult.culturalConsiderations}</p>
+                      </div>
+                    )}
+                    
+                    {translationResult.strategy && (
+                      <div>
+                        <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Strategy:</p>
+                        <p className="text-sm text-muted-foreground">{translationResult.strategy}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Translation Box (The final text) */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <h3 className="text-base font-semibold">Translation</h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleEditTranslation}
+                      disabled={isEditingTranslation}
+                      className="hover-elevate"
+                      data-testid="button-edit-translation"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {isEditingTranslation ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          value={editedTranslation}
+                          onChange={(e) => setEditedTranslation(e.target.value)}
+                          className="min-h-16"
+                          data-testid="textarea-edit-translation"
+                        />
+                        <div className="flex space-x-2">
+                          <Button size="sm" onClick={handleSaveEdit} data-testid="button-save-edit">
+                            <Check className="w-3 h-3 mr-1" />
+                            Save
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                            <X className="w-3 h-3 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-secondary/10 border border-secondary/20 rounded-md">
+                        <p className="text-base leading-relaxed font-medium">{translationResult.translation}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Safety Check Box (The blind verification) - Placeholder until back-translation loads */}
+                <Card>
+                  <CardHeader>
+                    <h3 className="text-base font-semibold">Safety Check</h3>
+                  </CardHeader>
+                  <CardContent>
+                    {backTranslationResult ? (
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-1">Back-Translation:</p>
+                          <p className="text-sm text-muted-foreground">{backTranslationResult.backTranslation}</p>
+                        </div>
+                        
+                        {backTranslationResult.perceivedTone && (
+                          <div>
+                            <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mb-1">Perceived Tone:</p>
+                            <p className="text-sm text-muted-foreground">{backTranslationResult.perceivedTone}</p>
+                          </div>
+                        )}
+                        
+                        {backTranslationResult.culturalNuance && (
+                          <div>
+                            <p className="text-sm font-medium text-pink-600 dark:text-pink-400 mb-1">Cultural Nuance:</p>
+                            <p className="text-sm text-muted-foreground">{backTranslationResult.culturalNuance}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-muted/30 rounded-md">
+                        <p className="text-sm text-muted-foreground">
+                          {isBackTranslating ? "Running safety check..." : "Safety check will run automatically"}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           )}
 
-          {/* Quality Check */}
+          {/* Step 4: Action Box - Only shows when safety check is complete */}
           {backTranslationResult && (
             <Card>
               <CardHeader>
-                <h3 className="text-base font-semibold">Quality Check</h3>
-                <p className="text-sm text-muted-foreground">
-                  Does this look right to you?
-                </p>
+                <h3 className="text-lg font-semibold text-center">Step 4: Action</h3>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <Badge variant="outline" className="mb-2">Original</Badge>
-                    <p className="bg-muted/30 p-3 rounded-md">{message}</p>
-                  </div>
-                  <div>
-                    <Badge variant="secondary" className="mb-2">Translation</Badge>
-                    <p className="bg-secondary/10 p-3 rounded-md font-medium">
-                      {translationResult?.translation}
-                    </p>
-                  </div>
-                  <div>
-                    <Badge variant="outline" className="mb-2">Back-check</Badge>
-                    <p className="bg-accent/30 p-3 rounded-md">
-                      {isBackTranslating ? "Checking..." : backTranslationResult.backTranslation}
-                    </p>
+                {/* Refine It? Section */}
+                <div className="p-4 bg-muted/30 rounded-md">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <label className="text-sm font-medium">Refine It?</label>
+                    <Textarea
+                      value={refinementFeedback}
+                      onChange={(e) => setRefinementFeedback(e.target.value)}
+                      placeholder="e.g., 'Make it more formal' or 'Add politeness markers'"
+                      className="flex-1 min-h-[60px] resize-none"
+                      data-testid="textarea-refine-feedback"
+                    />
+                    <Button
+                      onClick={handleRefine}
+                      disabled={!refinementFeedback.trim() || isRefining}
+                      variant="outline"
+                      data-testid="button-revise"
+                    >
+                      {isRefining ? 'Revising...' : 'Revise'}
+                    </Button>
                   </div>
                 </div>
                 
-                {/* Enhanced Safety Check Analysis */}
-                <div className="space-y-3">
-                  {backTranslationResult.literalTranslation && (
-                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">Literal Translation:</p>
-                      <p className="text-sm text-yellow-700 dark:text-yellow-300">{backTranslationResult.literalTranslation}</p>
-                    </div>
-                  )}
-                  
-                  {backTranslationResult.perceivedTone && (
-                    <div className="p-3 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-md">
-                      <p className="text-sm font-medium text-indigo-800 dark:text-indigo-200 mb-1">Perceived Tone:</p>
-                      <p className="text-sm text-indigo-700 dark:text-indigo-300">{backTranslationResult.perceivedTone}</p>
-                    </div>
-                  )}
-                  
-                  {backTranslationResult.culturalNuance && (
-                    <div className="p-3 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800 rounded-md">
-                      <p className="text-sm font-medium text-pink-800 dark:text-pink-200 mb-1">Cultural Nuance:</p>
-                      <p className="text-sm text-pink-700 dark:text-pink-300">{backTranslationResult.culturalNuance}</p>
-                    </div>
-                  )}
-                  
-                  <div className="p-3 bg-card border border-card-border rounded-md">
-                    <p className="text-sm text-muted-foreground mb-1">Overall Assessment:</p>
-                    <p className="text-sm">{backTranslationResult.culturalAnalysis}</p>
-                  </div>
-                </div>
-
-                {/* Action Box - Matches Wireframe Step 4 */}
-                <div className="p-4 bg-card border border-card-border rounded-md">
-                  <h4 className="text-sm font-semibold mb-3">Action</h4>
-                  
-                  {/* Refine It? Section */}
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium">Refine It?</label>
-                      <Textarea
-                        value={refinementFeedback}
-                        onChange={(e) => setRefinementFeedback(e.target.value)}
-                        placeholder="e.g., 'Make it more formal' or 'Add politeness markers'"
-                        className="flex-1 min-h-[60px] resize-none"
-                        data-testid="textarea-refine-feedback"
-                      />
-                      <Button
-                        onClick={handleRefine}
-                        disabled={!refinementFeedback.trim() || isRefining}
-                        variant="outline"
-                        data-testid="button-revise"
-                      >
-                        {isRefining ? 'Revising...' : 'Revise'}
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Approve & Send to ElevenLabs */}
-                  <div className="flex space-x-3">
-                    <Button
-                      onClick={handleStartOver}
-                      variant="outline"
-                      className="flex-1"
-                      disabled={isGeneratingAudio}
-                    >
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Start Over
-                    </Button>
-                    <Button
-                      onClick={handleApprove}
-                      className="flex-1"
-                      disabled={isGeneratingAudio}
-                      data-testid="button-approve"
-                    >
-                      {isGeneratingAudio ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                          <span>Generating Audio...</span>
-                        </div>
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4 mr-2" />
-                          Approve & Send to ElevenLabs
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                {/* Approve & Send to ElevenLabs */}
+                <div className="flex space-x-3">
+                  <Button
+                    onClick={handleStartOver}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={isGeneratingAudio}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Start Over
+                  </Button>
+                  <Button
+                    onClick={handleApprove}
+                    className="flex-1"
+                    disabled={isGeneratingAudio}
+                    data-testid="button-approve"
+                  >
+                    {isGeneratingAudio ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                        <span>Generating Audio...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Approve & Send to ElevenLabs
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
