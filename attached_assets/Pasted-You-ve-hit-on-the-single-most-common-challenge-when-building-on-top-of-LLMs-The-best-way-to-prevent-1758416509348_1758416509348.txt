@@ -1,0 +1,129 @@
+You've hit on the single most common challenge when building on top of LLMs. The best way to prevent the AI's responses from tripping up your code is to stop parsing plain text and start using **Tool Calling**.
+
+This feature forces the AI to respond with a structured JSON object that your code can reliably use, completely eliminating fragile text parsing.
+
+-----
+
+### \#\# The Best Solution: Use Anthropic's Tool Calling
+
+Instead of asking the AI to *format text* with labels like `TRANSLATION:`, you define a "tool" that the AI must "call." The AI's response will be a guaranteed-valid JSON object that you can use directly.
+
+Here’s how you would modify your `translateMessage` function.
+
+**1. Define Your Tool Schema**
+
+First, you describe the exact structure of the data you want back from the AI.
+
+```typescript
+const translationTool = {
+  name: "submit_translation",
+  description: "Submits the culturally-aware translation and its corresponding analysis.",
+  input_schema: {
+    type: "object",
+    properties: {
+      intent: {
+        type: "string",
+        description: "The user's communication goal."
+      },
+      cultural_considerations: {
+        type: "string",
+        description: "Key cultural factors for the target language."
+      },
+      strategy: {
+        type: "string",
+        description: "The translation approach taken."
+      },
+      translation: {
+        type: "string",
+        description: "The final, culturally appropriate translation."
+      }
+    },
+    required: ["intent", "cultural_considerations", "strategy", "translation"]
+  }
+};
+```
+
+**2. Update Your API Call**
+
+Next, you pass this tool definition to the API and tell the AI it *must* use it.
+
+```typescript
+// Inside your translateMessage function...
+const anthropic = getAnthropicClient(customApiKey);
+
+const response = await anthropic.messages.create({
+  model: DEFAULT_MODEL_STR,
+  system: "You are a cultural translation assistant...", // Your original system prompt
+  messages: [{ role: 'user', content: message }],
+  max_tokens: 1024,
+  tools: [translationTool], // <-- Add the tool definition here
+  tool_choice: { type: "tool", name: "submit_translation" } // <-- Force the AI to use this tool
+});
+```
+
+**3. Use the Structured JSON Response**
+
+Now, instead of parsing text, you just access the JSON directly. The SDK handles the complexity.
+
+```typescript
+// No more regex!
+const toolCall = response.content.find(contentBlock => contentBlock.type === "tool_use");
+
+if (!toolCall || toolCall.name !== 'submit_translation') {
+  throw new Error("Expected the AI to use the 'submit_translation' tool.");
+}
+
+// The arguments are already a clean JSON object.
+const { intent, cultural_considerations, strategy, translation } = toolCall.input;
+
+// You can now directly use these variables.
+const culturalNotes = `Intent: ${intent}\n\nCultural Considerations: ${cultural_considerations}\n\nStrategy: ${strategy}`;
+
+return {
+  translation,
+  culturalNotes,
+  intent,
+  culturalConsiderations: cultural_considerations, // Note the snake_case from JSON
+  strategy
+};
+```
+
+This method is **dramatically more reliable** than text parsing and is the modern, recommended way to get structured data from Anthropic's models.
+
+-----
+
+### \#\# Other Quick Fixes (If You Can't Use Tools)
+
+If you need to stick with text parsing for now, here are two ways to make it stronger:
+
+**1. Use XML Tags in Your Prompt**
+
+LLMs are excellent at following XML/HTML structures. Change your prompt's output format to use tags.
+
+**Prompt Snippet:**
+
+> ...Please respond in this exact XML format. Do not include any other text outside of these tags.
+> `<analysis>`
+> `<intent>...</intent>`
+> `<strategy>...</strategy>`
+> `</analysis>`
+> `<translation>...</translation>`
+
+Parsing XML is much more reliable than parsing plain text with labels.
+
+**2. Implement a "Retry with Self-Correction" Loop**
+
+If your regex parsing fails, don't just throw an error. Catch it and ask the AI to fix its own mistake.
+
+```typescript
+try {
+  // Your current parsing logic...
+} catch (error) {
+  // If parsing fails, make a new API call
+  const correctionMessage = `Your previous response did not follow the required format. Here is your incorrect response: "${failedResponseText}". Please correct it and provide the output using the exact "TRANSLATION:" format.`;
+  
+  // Make a new API call with this correction message...
+}
+```
+
+This adds resilience, as the model is often very good at correcting itself when shown its error.

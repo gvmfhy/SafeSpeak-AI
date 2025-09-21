@@ -1,0 +1,63 @@
+That is an excellent and very insightful question. You're thinking on a deeper level about how the model actually processes information.
+
+Here’s the answer: For a traditional, strict JSON parser, the order of keys doesn't matter. **However, for an LLM, ordering the properties in your tool schema to match a logical thought process is a best practice and can improve the quality and consistency of the results.**
+
+### Why the Order Matters to an LLM
+
+Think of the tool schema not just as a data structure, but as a **cognitive scaffold** for the AI. LLMs generate their responses sequentially, one token after another. By ordering the schema fields logically, you guide the model's "thought process," forcing it to consider the foundational elements before producing the final output.
+
+The logical flow we designed is:
+
+1.  **Analyze the situation** (`intent`, `cultural_considerations`)
+2.  **Form a plan** (`strategy`)
+3.  **Execute the plan** (`translation`)
+4.  **Explain the execution** (`cultural_notes`)
+
+Arranging your schema this way encourages the model to fully reason through the "why" and "how" before it generates the "what."
+
+### Recommended Schema Order
+
+Based on this principle, here is the recommended order for the properties in your `translationTool` schema. This structure encourages the highest quality output.
+
+```typescript
+// Inside translateMessage, the recommended order for the tool schema:
+const translationTool = {
+  name: "submit_translation",
+  description: "Submits the culturally-aware translation and its corresponding analysis.",
+  input_schema: {
+    type: "object",
+    properties: {
+      // 1. ANALYSIS FIELDS (The "Why")
+      intent: {
+        type: "string",
+        description: "The user's communication goal."
+      },
+      cultural_considerations: {
+        type: "string",
+        description: "Key cultural factors for the target language."
+      },
+      // 2. STRATEGY FIELD (The "How")
+      strategy: {
+        type: "string",
+        description: "The translation approach taken based on the analysis."
+      },
+      // 3. EXECUTION FIELD (The "What")
+      translation: {
+        type: "string",
+        description: "The final, culturally appropriate translation."
+      },
+      // 4. EXPLANATION FIELD (The "Reflection")
+      cultural_notes: {
+        type: "string",
+        description: "Explanation of the specific cultural adaptations made in the translation."
+      }
+    },
+    // The required list doesn't need to be in the same order, but it's good practice.
+    required: ["intent", "cultural_considerations", "strategy", "translation", "cultural_notes"]
+  }
+};
+```
+
+So, to answer your direct question: **yes, placing fields like `intent` and `strategy` before `translation` is better.** It forces the model to populate the reasoning fields first, which logically informs the final translation. Placing `cultural_notes` after the `translation` is also logical, as it serves as an explanation *of* the translation that was just generated.
+
+This is a subtle but powerful optimization that makes your interaction with the LLM more reliable and predictable.

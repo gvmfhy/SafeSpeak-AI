@@ -65,13 +65,6 @@ export async function translateMessage(
     // Convert target language to proper case for Claude
     const properCaseLanguage = targetLanguage.charAt(0).toUpperCase() + targetLanguage.slice(1).toLowerCase();
     
-    console.log('=== TRANSLATION REQUEST DEBUG ===');
-    console.log('Message:', message);
-    console.log('Target Language (original):', targetLanguage);
-    console.log('Target Language (proper case):', properCaseLanguage);
-    console.log('Custom System Prompt:', customSystemPrompt);
-    console.log('Preset Context:', presetContext);
-    console.log('=== END REQUEST DEBUG ===');
     
     let systemPrompt = customSystemPrompt;
     
@@ -81,7 +74,7 @@ export async function translateMessage(
       const toneContext = presetContext?.tone || 'appropriate';
       const additionalContext = presetContext?.customPrompt || '';
       
-      systemPrompt = `You are a cultural translation assistant. Your task is to translate a message, but first, you must think through the context step-by-step to ensure the translation is culturally appropriate.
+      systemPrompt = `You are a cultural translation assistant. Translate the message to ${properCaseLanguage} with cultural sensitivity.
 
 Context:
 - Target Language: ${properCaseLanguage}
@@ -89,35 +82,43 @@ Context:
 - Desired Tone: ${toneContext}
 ${additionalContext ? `- Additional Context: ${additionalContext}` : ''}
 
-Your Process:
-
-1. Analyze Intent: First, explain what the user is trying to achieve with this message.
-
-2. Cultural Considerations: Next, list key cultural factors that should influence the translation.
-
-3. Translation Strategy: Based on the above, describe your translation strategy.
-
-4. Final Translation: Provide the culturally appropriate translation.
-
-Please respond in this exact format:
-
-BEGIN ANALYSIS
-
-Intent: [Explain the user's communication goal]
-
-Cultural Considerations: [List key cultural factors for ${properCaseLanguage}]
-
-Strategy: [Describe your translation approach]
-
-TRANSLATION:
-[Your ${properCaseLanguage} translation here]
-
-CULTURAL_NOTES:
-[Explain the cultural adaptations you made and why they improve communication effectiveness]`;
+Analyze the user's intent, consider cultural factors, develop a translation strategy, then provide the culturally appropriate translation. Use the submit_translation tool to provide your structured response.`;
     } else {
       // Replace placeholders in custom system prompt
       systemPrompt = systemPrompt.replace(/\{TARGET_LANGUAGE\}/g, targetLanguage);
     }
+
+    // Define the tool for structured translation response
+    const translationTool = {
+      name: "submit_translation",
+      description: "Submits the culturally-aware translation and its corresponding analysis.",
+      input_schema: {
+        type: "object",
+        properties: {
+          intent: {
+            type: "string",
+            description: "The user's communication goal."
+          },
+          cultural_considerations: {
+            type: "string",
+            description: "Key cultural factors for the target language."
+          },
+          strategy: {
+            type: "string",
+            description: "The translation approach taken."
+          },
+          translation: {
+            type: "string",
+            description: "The final, culturally appropriate translation."
+          },
+          cultural_notes: {
+            type: "string",
+            description: "Explanation of cultural adaptations made."
+          }
+        },
+        required: ["intent", "cultural_considerations", "strategy", "translation", "cultural_notes"]
+      }
+    };
 
     const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
@@ -127,130 +128,31 @@ CULTURAL_NOTES:
         { role: 'user', content: message }
       ],
       max_tokens: 1000,
+      tools: [translationTool],
+      tool_choice: { type: "tool", name: "submit_translation" }
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Expected text response from Claude');
-    }
-    
-    console.log('=== CLAUDE RESPONSE DEBUG ===');
-    console.log(content.text);
-    console.log('=== END DEBUG ===');
-    
-    // Parse both XML and structured text response formats
-    let translation = '';
-    let culturalNotes = '';
-    let intent = '';
-    let culturalConsiderations = '';
-    let strategy = '';
+    // Use Tool Calling for reliable structured response
+    const toolCall = response.content.find(contentBlock => contentBlock.type === "tool_use");
 
-    // Robust parsing to handle various Claude response formats
-    const responseText = content.text;
-    
-    // Try multiple patterns for translation extraction
-    const translationPatterns = [
-      /TRANSLATION:\s*\n+([\s\S]*?)(?:\n\s*$|\n\s*[A-Z_]+:|$)/i,
-      /TRANSLATION:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /<translation>([\s\S]*?)<\/translation>/i,
-      /(?:Final\s+)?Translation:\s*(.*?)(?:\n|$)/i,
-      /(?:In\s+\w+|Translated):\s*(.*?)(?:\n|$)/i
-    ];
-    
-    const intentPatterns = [
-      /Intent:\s*(.*?)(?:\n\n|\n(?=[A-Z])|\n\s*$)/i,
-      /(?:Communication\s+)?Intent:\s*(.*?)(?:\n|$)/i
-    ];
-    
-    const considerationsPatterns = [
-      /Cultural\s+Considerations?:\s*([\s\S]*?)(?:\n\n(?:Strategy|TRANSLATION)|$)/i,
-      /Cultural\s+(?:factors?|notes?):\s*([\s\S]*?)(?:\n\n|$)/i
-    ];
-    
-    const strategyPatterns = [
-      /Strategy:\s*([\s\S]*?)(?:\n\n(?:TRANSLATION|Final)|$)/i,
-      /Translation\s+Strategy:\s*([\s\S]*?)(?:\n\n|$)/i
-    ];
-
-    // Extract translation with multiple attempts
-    for (const pattern of translationPatterns) {
-      const match = responseText.match(pattern);
-      if (match && match[1].trim()) {
-        translation = match[1].trim();
-        break;
-      }
+    if (!toolCall || toolCall.name !== 'submit_translation') {
+      throw new Error("Expected the AI to use the 'submit_translation' tool.");
     }
 
-    // Special handling: If Claude is asking for language clarification, 
-    // provide a helpful response that incorporates the target language
-    if (!translation && responseText.toLowerCase().includes('target language')) {
-      translation = `I need to know the target language. You selected "${properCaseLanguage}" - let me translate to ${properCaseLanguage}.`;
-      intent = 'Clarify target language selection and proceed with translation';
-      culturalConsiderations = `The user has selected ${properCaseLanguage} as the target language for translation`;
-      strategy = 'Acknowledge language selection and provide translation guidance';
+    // The arguments are already a clean JSON object - no parsing needed!
+    const { intent, cultural_considerations, strategy, translation, cultural_notes } = toolCall.input;
+
+    // Clean and validate the response
+    if (!translation || !translation.trim()) {
+      throw new Error('Translation is required but was empty');
     }
 
-    // Extract other components
-    for (const pattern of intentPatterns) {
-      const match = responseText.match(pattern);
-      if (match && match[1].trim()) {
-        intent = match[1].trim();
-        break;
-      }
-    }
-
-    for (const pattern of considerationsPatterns) {
-      const match = responseText.match(pattern);
-      if (match && match[1].trim()) {
-        culturalConsiderations = match[1].trim();
-        break;
-      }
-    }
-
-    for (const pattern of strategyPatterns) {
-      const match = responseText.match(pattern);
-      if (match && match[1].trim()) {
-        strategy = match[1].trim();
-        break;
-      }
-    }
-
-    // Combine cultural notes
-    culturalNotes = [
-      intent && `Intent: ${intent}`,
-      culturalConsiderations && `Cultural Considerations: ${culturalConsiderations}`,
-      strategy && `Strategy: ${strategy}`
-    ].filter(Boolean).join('\n\n') || 'No detailed analysis provided';
-
-    // If still no translation found, try a more flexible approach
-    if (!translation) {
-      console.log('Claude Response:', content.text); // Debug log
-      
-      // Look for any text after common translation indicators
-      const fallbackPatterns = [
-        /(?:Translation|Translated|In\s+\w+):\s*([^\n]+)/i,
-        /([^.!?]+[.!?])/g // Just grab the first sentence as a last resort
-      ];
-      
-      for (const pattern of fallbackPatterns) {
-        const match = content.text.match(pattern);
-        if (match) {
-          translation = Array.isArray(match) ? match[0] : match[1];
-          translation = translation.trim();
-          break;
-        }
-      }
-    }
-
-    if (!translation) {
-      throw new Error('Translation not found in response');
-    }
 
     return {
       translation,
-      culturalNotes,
+      culturalNotes: cultural_notes,
       intent,
-      culturalConsiderations,
+      culturalConsiderations: cultural_considerations,
       strategy
     };
   } catch (error) {
@@ -266,157 +168,73 @@ export async function backTranslateMessage(
   customApiKey?: string
 ): Promise<BackTranslationResult> {
   try {
-    const userContent = `You are a back-translation specialist. Your job is to translate the following text into English and explain what a native speaker would truly understand from it, including its tone and any hidden meanings.
+    // Define the tool for structured back-translation response
+    const backTranslationTool = {
+      name: "submit_back_translation",
+      description: "Submits the back-translation analysis and safety check results.",
+      input_schema: {
+        type: "object",
+        properties: {
+          literal_translation: {
+            type: "string",
+            description: "Word-for-word English translation of the text."
+          },
+          perceived_tone: {
+            type: "string",
+            description: "How a native speaker would perceive the tone."
+          },
+          cultural_nuance: {
+            type: "string",
+            description: "Cultural implications and hidden meanings."
+          },
+          overall_assessment: {
+            type: "string",
+            description: "How this would be received by a native speaker."
+          }
+        },
+        required: ["literal_translation", "perceived_tone", "cultural_nuance", "overall_assessment"]
+      }
+    };
 
-This is an independent safety check - you should analyze the ${targetLanguage} text without being influenced by the original intent.
+    const systemPrompt = `You are a back-translation specialist. Analyze the ${targetLanguage} text as an independent safety check without being influenced by the original intent.
 
-Text to Analyze:
-"${translation}"
+Text to Analyze: "${translation}"
 
-Provide the following:
-
-Literal English Translation: [Word-for-word translation]
-
-Perceived Tone: [How would a native ${targetLanguage} speaker perceive the tone? e.g., Formal, Warm, Clinical, Respectful, etc.]
-
-Cultural Nuance: [What cultural implications, formality levels, or hidden meanings would a native speaker understand from this text?]
-
-Overall Assessment: [How would this be received by a native speaker in their cultural context?]
-
-Please respond in this exact format:
-
-LITERAL_TRANSLATION:
-[Your literal English translation]
-
-PERCEIVED_TONE:
-[Description of the tone]
-
-CULTURAL_NUANCE:
-[Analysis of cultural implications]
-
-ASSESSMENT:
-[Overall cultural assessment]`;
+Provide a literal English translation, analyze the perceived tone, identify cultural nuances, and give an overall assessment of how a native speaker would receive this message.`;
 
     const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
       model: DEFAULT_MODEL_STR,
+      system: systemPrompt,
       messages: [
-        { role: 'user', content: userContent }
+        { role: 'user', content: 'Please analyze the provided text using the submit_back_translation tool.' }
       ],
       max_tokens: 600,
+      tools: [backTranslationTool],
+      tool_choice: { type: "tool", name: "submit_back_translation" }
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Expected text response from Claude');
-    }
-    
-    // Robust parsing for back-translation response
-    const responseText = content.text;
-    let backTranslation = '';
-    let culturalAnalysis = '';
-    let literalTranslation = '';
-    let perceivedTone = '';
-    let culturalNuance = '';
+    // Use Tool Calling for reliable structured response
+    const toolCall = response.content.find(contentBlock => contentBlock.type === "tool_use");
 
-    // Multiple patterns for each field
-    const literalPatterns = [
-      /Literal\s+English\s+Translation:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /LITERAL_TRANSLATION:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /Literal:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /Word-for-word:\s*([\s\S]*?)(?:\n\n|$)/i
-    ];
-
-    const tonePatterns = [
-      /Perceived\s+Tone:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /PERCEIVED_TONE:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /Tone:\s*([\s\S]*?)(?:\n\n|$)/i
-    ];
-
-    const nuancePatterns = [
-      /Cultural\s+Nuance:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /CULTURAL_NUANCE:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /Cultural\s+implications?:\s*([\s\S]*?)(?:\n\n|$)/i
-    ];
-
-    const assessmentPatterns = [
-      /Overall\s+Assessment:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /ASSESSMENT:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /Assessment:\s*([\s\S]*?)(?:\n\n|$)/i,
-      /Reception:\s*([\s\S]*?)(?:\n\n|$)/i
-    ];
-
-    // Extract each field
-    for (const pattern of literalPatterns) {
-      const match = responseText.match(pattern);
-      if (match && match[1].trim()) {
-        literalTranslation = match[1].trim();
-        break;
-      }
+    if (!toolCall || toolCall.name !== 'submit_back_translation') {
+      throw new Error("Expected the AI to use the 'submit_back_translation' tool.");
     }
 
-    for (const pattern of tonePatterns) {
-      const match = responseText.match(pattern);
-      if (match && match[1].trim()) {
-        perceivedTone = match[1].trim();
-        break;
-      }
-    }
+    // The arguments are already a clean JSON object - no parsing needed!
+    const { literal_translation, perceived_tone, cultural_nuance, overall_assessment } = toolCall.input;
 
-    for (const pattern of nuancePatterns) {
-      const match = responseText.match(pattern);
-      if (match && match[1].trim()) {
-        culturalNuance = match[1].trim();
-        break;
-      }
+    // Clean and validate the response
+    if (!literal_translation || !literal_translation.trim()) {
+      throw new Error('Literal translation is required but was empty');
     }
-
-    for (const pattern of assessmentPatterns) {
-      const match = responseText.match(pattern);
-      if (match && match[1].trim()) {
-        culturalAnalysis = match[1].trim();
-        break;
-      }
-    }
-
-    // Use literal translation as primary back-translation, with fallbacks
-    backTranslation = literalTranslation;
-    
-    if (!backTranslation) {
-      // Try XML format fallback
-      const xmlMatch = responseText.match(/<back_translation>([\s\S]*?)<\/back_translation>/i);
-      if (xmlMatch) {
-        backTranslation = xmlMatch[1].trim();
-      }
-    }
-
-    if (!backTranslation) {
-      // Try to extract any reasonable English text
-      const fallbackPatterns = [
-        /(?:Back|Return)\s+translation:\s*(.*?)(?:\n|$)/i,
-        /In\s+English:\s*(.*?)(?:\n|$)/i,
-        /Translation:\s*(.*?)(?:\n|$)/i
-      ];
-      
-      for (const pattern of fallbackPatterns) {
-        const match = responseText.match(pattern);
-        if (match && match[1].trim()) {
-          backTranslation = match[1].trim();
-          break;
-        }
-      }
-    }
-
-    // Set defaults if still missing
-    backTranslation = backTranslation || 'Back-translation not provided';
-    culturalAnalysis = culturalAnalysis || 'Cultural analysis not provided';
 
     return {
-      backTranslation,
-      culturalAnalysis,
-      literalTranslation,
-      perceivedTone,
-      culturalNuance
+      backTranslation: literal_translation,
+      culturalAnalysis: overall_assessment,
+      literalTranslation: literal_translation,
+      perceivedTone: perceived_tone,
+      culturalNuance: cultural_nuance
     };
   } catch (error) {
     console.error('Back-translation error:', error);
