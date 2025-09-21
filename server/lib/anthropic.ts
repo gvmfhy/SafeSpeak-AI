@@ -91,7 +91,11 @@ Respond with only the ${properCaseLanguage} translation, no quotes, no explanati
     return (async function* () {
       for await (const chunk of stream) {
         if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-          yield chunk.delta.text;
+          // Clean quotes from streaming output to prevent pollution
+          const cleanText = chunk.delta.text.replace(/^"|"$/g, '');
+          if (cleanText) {
+            yield cleanText;
+          }
         }
       }
     })();
@@ -178,12 +182,15 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
       }
     };
 
+    // Create explicit user message that reinforces target language
+    const userMessage = `Please translate this message to ${properCaseLanguage}: "${message}"`;
+
     const anthropic = getAnthropicClient(customApiKey);
     const response = await anthropic.messages.create({
       model: TRANSLATION_MODEL, // Use high-accuracy Sonnet for main translation
       system: systemPrompt,
       messages: [
-        { role: 'user', content: message }
+        { role: 'user', content: userMessage }
       ],
       max_tokens: 2500, // Increased for complex medical translations
       tools: [translationTool],
