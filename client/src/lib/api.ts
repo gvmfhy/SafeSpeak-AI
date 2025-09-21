@@ -87,6 +87,8 @@ let typewriterActive = false;
 let currentDisplayText = '';
 
 async function queueCharacterDisplay(chunk: string, onCharacter: (text: string) => void) {
+  console.log("🔤 Adding to typewriter queue:", chunk);
+  
   // Add chunk characters to queue
   for (const char of chunk) {
     typewriterQueue.push(char);
@@ -95,6 +97,7 @@ async function queueCharacterDisplay(chunk: string, onCharacter: (text: string) 
   // Start typewriter if not already running
   if (!typewriterActive) {
     typewriterActive = true;
+    console.log("⌨️ Starting typewriter effect");
     
     while (typewriterQueue.length > 0) {
       const char = typewriterQueue.shift()!;
@@ -107,6 +110,7 @@ async function queueCharacterDisplay(chunk: string, onCharacter: (text: string) 
     }
     
     typewriterActive = false;
+    console.log("✅ Typewriter effect complete");
   }
 }
 

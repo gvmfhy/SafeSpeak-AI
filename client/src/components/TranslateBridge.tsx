@@ -137,26 +137,24 @@ I need you to translate the following message with cultural sensitivity and appr
         customPrompt: selectedPreset.customPrompt
       } : undefined;
       
-      // Append the target language to the message so Claude knows exactly what language to translate to
-      const messageWithLanguage = `${message} [translate to ${getLanguageLabel()}]`;
+      // Use clean message without language instruction to avoid polluting translation
+      const cleanMessage = message;
       
       // Start streaming translation for immediate feedback
       const cancel = await streamTranslation(
-        messageWithLanguage,
+        cleanMessage,
         getLanguageLabel(),
         {
           onStart: () => {
             console.log("🚀 Streaming started");
             setStreamingText("");
-            setStreamPreview("");
-            setShowStreamPreview(true);
+            // No more blue popup!
           },
           onChunk: (chunk: string) => {
             console.log("📝 Streaming chunk:", chunk);
-            // Update stream preview immediately for responsive feedback
-            setStreamPreview(prev => prev + chunk);
+            // No preview - just use for typewriter buffer
           },
-          // New typewriter effect - character by character display
+          // Character-by-character display (the actual typewriter effect)
           onCharacter: (displayText: string) => {
             setStreamingText(displayText);
           },
@@ -165,14 +163,11 @@ I need you to translate the following message with cultural sensitivity and appr
             setIsStreaming(false);
             setStreamingText(fullText);
             
-            // Fade out stream preview after a delay
-            setTimeout(() => {
-              setShowStreamPreview(false);
-            }, 1200);
+            // No more preview to fade out!
             
             // Now run structured analysis in background for complete cultural intelligence
             try {
-              const structuredResult = await translateMessage(messageWithLanguage, getLanguageLabel(), hasEditedPrompt ? systemPrompt : undefined, presetContext, getApiKeys());
+              const structuredResult = await translateMessage(cleanMessage, getLanguageLabel(), hasEditedPrompt ? systemPrompt : undefined, presetContext, getApiKeys());
               
               // Merge streaming result with structured analysis
               setTranslationResult({
@@ -585,21 +580,7 @@ I need you to translate the following message with cultural sensitivity and appr
                   </Button>
                   
                   {/* Streaming Preview Ticker */}
-                  {showStreamPreview && (
-                    <div 
-                      className="absolute top-full left-0 mt-2 p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md shadow-sm z-10 max-w-xs"
-                      data-testid="stream-ticker"
-                    >
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">AI Translating...</span>
-                      </div>
-                      <p className="text-sm text-blue-800 dark:text-blue-200 truncate">
-                        {streamPreview}
-                        {isStreaming && <span className="animate-pulse text-blue-500">|</span>}
-                      </p>
-                    </div>
-                  )}
+                  {/* Blue popup removed - user hated it! */}
                 </div>
               </div>
             </CardContent>
