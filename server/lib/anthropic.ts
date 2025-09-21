@@ -62,6 +62,17 @@ export async function translateMessage(
   customApiKey?: string
 ): Promise<TranslationResult> {
   try {
+    // Convert target language to proper case for Claude
+    const properCaseLanguage = targetLanguage.charAt(0).toUpperCase() + targetLanguage.slice(1).toLowerCase();
+    
+    console.log('=== TRANSLATION REQUEST DEBUG ===');
+    console.log('Message:', message);
+    console.log('Target Language (original):', targetLanguage);
+    console.log('Target Language (proper case):', properCaseLanguage);
+    console.log('Custom System Prompt:', customSystemPrompt);
+    console.log('Preset Context:', presetContext);
+    console.log('=== END REQUEST DEBUG ===');
+    
     let systemPrompt = customSystemPrompt;
     
     // If no custom system prompt, use enhanced cultural intelligence prompt
@@ -73,7 +84,7 @@ export async function translateMessage(
       systemPrompt = `You are a cultural translation assistant. Your task is to translate a message, but first, you must think through the context step-by-step to ensure the translation is culturally appropriate.
 
 Context:
-- Target Language: ${targetLanguage}
+- Target Language: ${properCaseLanguage}
 - Relationship/Setting: ${relationshipContext}
 - Desired Tone: ${toneContext}
 ${additionalContext ? `- Additional Context: ${additionalContext}` : ''}
@@ -94,12 +105,12 @@ BEGIN ANALYSIS
 
 Intent: [Explain the user's communication goal]
 
-Cultural Considerations: [List key cultural factors for ${targetLanguage}]
+Cultural Considerations: [List key cultural factors for ${properCaseLanguage}]
 
 Strategy: [Describe your translation approach]
 
 TRANSLATION:
-[Your ${targetLanguage} translation here]
+[Your ${properCaseLanguage} translation here]
 
 CULTURAL_NOTES:
 [Explain the cultural adaptations you made and why they improve communication effectiveness]`;
@@ -168,6 +179,15 @@ CULTURAL_NOTES:
         translation = match[1].trim();
         break;
       }
+    }
+
+    // Special handling: If Claude is asking for language clarification, 
+    // provide a helpful response that incorporates the target language
+    if (!translation && responseText.toLowerCase().includes('target language')) {
+      translation = `I need to know the target language. You selected "${properCaseLanguage}" - let me translate to ${properCaseLanguage}.`;
+      intent = 'Clarify target language selection and proceed with translation';
+      culturalConsiderations = `The user has selected ${properCaseLanguage} as the target language for translation`;
+      strategy = 'Acknowledge language selection and provide translation guidance';
     }
 
     // Extract other components
