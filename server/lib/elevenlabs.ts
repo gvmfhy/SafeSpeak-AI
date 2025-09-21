@@ -12,8 +12,8 @@ interface GenerateAudioResponse {
 class ElevenLabsService {
   private apiKey: string;
   private baseUrl = 'https://api.elevenlabs.io/v1';
-  private defaultVoiceId = 'ErXwobaYiN019PkySvjV'; // Default voice suitable for general communication
-  private defaultModel = 'eleven_multilingual_v2';
+  private defaultVoiceId = 'JBFqnCBsd6RMkjVDRZzb'; // George - stable multilingual voice
+  private defaultModel = 'eleven_v3'; // Latest v3 model
 
   constructor(options: ElevenLabsOptions) {
     this.apiKey = options.apiKey;
@@ -21,19 +21,23 @@ class ElevenLabsService {
 
   async generateAudio(text: string, language: string): Promise<GenerateAudioResponse> {
     try {
-      // Map languages to appropriate voice IDs for better pronunciation
-      const voiceMap: Record<string, string> = {
-        'mandarin': 'XrExE9yKIg1WjnnlVkGX', // Multilingual voice good for Mandarin
-        'spanish': '21m00Tcm4TlvDq8ikWAM', // Spanish-optimized voice
-        'arabic': 'AZnzlk1XvdvUeBnXmlld', // Multilingual voice
-        'french': 'ErXwobaYiN019PkySvjV', // French-capable voice
-        'portuguese': 'MF3mGyEYCl7XYWbV9V6O', // Portuguese voice
-        'russian': 'VR6AewLTigWG4xSOukaG', // Russian voice
-        'korean': 'pqHfZKP75CvOlQylNhV4', // Korean voice  
-        'vietnamese': 'IKne3meq5aSn9XLyUdCD', // Vietnamese voice
+      // Use default multilingual voice for all languages - it works with v3 model
+      const voiceId = this.defaultVoiceId;
+      
+      // Map language names to proper language codes
+      const languageCodeMap: Record<string, string> = {
+        'spanish': 'es',
+        'mandarin chinese': 'zh',
+        'japanese': 'ja', 
+        'arabic': 'ar',
+        'french': 'fr',
+        'portuguese': 'pt',
+        'russian': 'ru',
+        'korean': 'ko',
+        'vietnamese': 'vi',
       };
-
-      const voiceId = voiceMap[language] || this.defaultVoiceId;
+      
+      const languageCode = languageCodeMap[language.toLowerCase()] || 'en';
 
       const response = await fetch(`${this.baseUrl}/text-to-speech/${voiceId}`, {
         method: 'POST',
@@ -45,11 +49,12 @@ class ElevenLabsService {
         body: JSON.stringify({
           text: text,
           model_id: this.defaultModel,
+          language_code: languageCode,
           voice_settings: {
-            stability: 0.75, // Clear and consistent for communication
-            similarity_boost: 0.75, // Maintain natural voice characteristics
-            style: 0.25, // Less dramatic, more professional
-            use_speaker_boost: true // Enhance clarity
+            stability: 0.5, // Balanced for v3 model
+            similarity_boost: 0.75, // Maintain voice characteristics
+            style: 0.0, // Natural style for v3
+            use_speaker_boost: true // Enhanced clarity
           }
         }),
       });
