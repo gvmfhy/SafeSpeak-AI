@@ -121,7 +121,10 @@ I need you to translate the following message with cultural sensitivity and appr
         customPrompt: selectedPreset.customPrompt
       } : undefined;
       
-      const result = await translateMessage(message, getLanguageLabel(), hasEditedPrompt ? systemPrompt : undefined, presetContext, getApiKeys());
+      // Append the target language to the message so Claude knows exactly what language to translate to
+      const messageWithLanguage = `${message} [translate to ${getLanguageLabel()}]`;
+      
+      const result = await translateMessage(messageWithLanguage, getLanguageLabel(), hasEditedPrompt ? systemPrompt : undefined, presetContext, getApiKeys());
       
       setTranslationResult(result);
       
@@ -141,6 +144,7 @@ I need you to translate the following message with cultural sensitivity and appr
     setIsBackTranslating(true);
     
     try {
+      // Use original message for back-translation (not the one with language appended)
       const result = await backTranslateMessage(message, translationToUse, getLanguageLabel(), getApiKeys());
       setBackTranslationResult(result);
     } catch (err) {
@@ -178,7 +182,7 @@ I need you to translate the following message with cultural sensitivity and appr
         currentTranslation: translationResult.translation,
         targetLanguage,
         userFeedback: refinementFeedback,
-        conversationContext: `Original analysis - Intent: ${translationResult.intent || 'N/A'}, Cultural Considerations: ${translationResult.culturalConsiderations || 'N/A'}, Strategy: ${translationResult.strategy || 'N/A'}`
+        conversationContext: `Original analysis - Intent: ${translationResult.intent || 'N/A'}, Cultural Considerations: ${translationResult.culturalConsiderations || 'N/A'}, Strategy: ${translationResult.strategy || 'N/A'}. Target language: ${getLanguageLabel()}`
       }, getApiKeys());
       
       setRefinementResult(result);
