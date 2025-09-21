@@ -12,7 +12,7 @@ interface GenerateAudioResponse {
 class ElevenLabsService {
   private apiKey: string;
   private baseUrl = 'https://api.elevenlabs.io/v1';
-  private defaultVoiceId = 'JBFqnCBsd6RMkjVDRZzb'; // George - stable multilingual voice
+  private defaultVoiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam - v3 optimized multilingual voice
   private defaultModel = 'eleven_v3'; // Latest v3 model
 
   constructor(options: ElevenLabsOptions) {
@@ -51,9 +51,9 @@ class ElevenLabsService {
           model_id: this.defaultModel,
           language_code: languageCode,
           voice_settings: {
-            stability: 0.5, // Balanced for v3 model
-            similarity_boost: 0.75, // Maintain voice characteristics
-            style: 0.0, // Natural style for v3
+            stability: 0.3, // Creative mode for maximum v3 expressiveness
+            similarity_boost: 0.8, // Higher similarity for v3
+            style: 0.2, // Enhanced style for v3
             use_speaker_boost: true // Enhanced clarity
           }
         }),
