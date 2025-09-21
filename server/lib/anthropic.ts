@@ -62,8 +62,21 @@ export async function translateMessage(
   customApiKey?: string
 ): Promise<TranslationResult> {
   try {
-    // Convert target language to proper case for Claude
-    const properCaseLanguage = targetLanguage.charAt(0).toUpperCase() + targetLanguage.slice(1).toLowerCase();
+    // Convert dropdown values to proper language names for Claude
+    const languageMap: Record<string, string> = {
+      'spanish': 'Spanish',
+      'mandarin': 'Mandarin Chinese',
+      'japanese': 'Japanese',
+      'arabic': 'Arabic',
+      'french': 'French',
+      'portuguese': 'Portuguese',
+      'russian': 'Russian',
+      'korean': 'Korean',
+      'vietnamese': 'Vietnamese'
+    };
+    
+    const properCaseLanguage = languageMap[targetLanguage.toLowerCase()] || 
+                              targetLanguage.charAt(0).toUpperCase() + targetLanguage.slice(1).toLowerCase();
     
     
     let systemPrompt = customSystemPrompt;
@@ -206,7 +219,23 @@ export async function backTranslateMessage(
       }
     };
 
-    const systemPrompt = `You are a back-translation specialist. Analyze the ${targetLanguage} text as an independent safety check without being influenced by the original intent.
+    // Use the same language mapping for consistency
+    const languageMap: Record<string, string> = {
+      'spanish': 'Spanish',
+      'mandarin': 'Mandarin Chinese',
+      'japanese': 'Japanese',
+      'arabic': 'Arabic',
+      'french': 'French',
+      'portuguese': 'Portuguese',
+      'russian': 'Russian',
+      'korean': 'Korean',
+      'vietnamese': 'Vietnamese'
+    };
+    
+    const properCaseLanguage = languageMap[targetLanguage.toLowerCase()] || 
+                              targetLanguage.charAt(0).toUpperCase() + targetLanguage.slice(1).toLowerCase();
+
+    const systemPrompt = `You are a back-translation specialist. Analyze the ${properCaseLanguage} text as an independent safety check without being influenced by the original intent.
 
 Text to Analyze: "${translation}"
 
