@@ -77,48 +77,6 @@ interface StreamingCallbacks {
   onChunk?: (text: string) => void;
   onComplete?: (fullText: string) => void;
   onError?: (error: string) => void;
-  // New callback for character-by-character display
-  onCharacter?: (displayText: string) => void;
-}
-
-// Typewriter effect for smooth character-by-character display
-let typewriterQueue: string[] = [];
-let typewriterActive = false;
-let currentDisplayText = '';
-
-async function queueCharacterDisplay(chunk: string, onCharacter: (text: string) => void) {
-  console.log("🔤 Adding to typewriter queue:", chunk);
-  
-  // Add chunk characters to queue
-  for (const char of chunk) {
-    typewriterQueue.push(char);
-  }
-  
-  // Start typewriter if not already running
-  if (!typewriterActive) {
-    typewriterActive = true;
-    console.log("⌨️ Starting typewriter effect");
-    
-    while (typewriterQueue.length > 0) {
-      const char = typewriterQueue.shift()!;
-      currentDisplayText += char;
-      onCharacter(currentDisplayText);
-      
-      // Adjust speed: 30ms for letters, 15ms for spaces, 5ms for punctuation
-      const delay = /[a-zA-Z]/.test(char) ? 30 : /\s/.test(char) ? 15 : 5;
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-    
-    typewriterActive = false;
-    console.log("✅ Typewriter effect complete");
-  }
-}
-
-// Reset typewriter state for new translations
-function resetTypewriter() {
-  typewriterQueue = [];
-  typewriterActive = false;
-  currentDisplayText = '';
 }
 
 export async function streamTranslation(
@@ -180,15 +138,10 @@ export async function streamTranslation(
                   
                   switch (data.type) {
                     case 'start':
-                      resetTypewriter(); // Reset typewriter for new translation
                       callbacks.onStart?.();
                       break;
                     case 'chunk':
                       callbacks.onChunk?.(data.text);
-                      // Add to typewriter buffer for character-by-character display
-                      if (callbacks.onCharacter) {
-                        queueCharacterDisplay(data.text, callbacks.onCharacter);
-                      }
                       break;
                     case 'complete':
                       callbacks.onComplete?.(data.fullText);
