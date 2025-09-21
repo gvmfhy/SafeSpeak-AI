@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, Settings, Pencil, Check, X, Play, Download, RotateCcw, AlertCircle } from "lucide-react";
+import { MessageSquare, Settings, Pencil, Check, X, Play, Download, RotateCcw, AlertCircle, Edit, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,6 +59,9 @@ export function TranslateBridge() {
   const [isEditingTranslation, setIsEditingTranslation] = useState(false);
   const [editedTranslation, setEditedTranslation] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [showRefineSection, setShowRefineSection] = useState<boolean>(false);
+  const [streamPreview, setStreamPreview] = useState<string>('');
+  const [showStreamPreview, setShowStreamPreview] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState(false);
   
   // Audio ref for playback
@@ -145,11 +148,16 @@ I need you to translate the following message with cultural sensitivity and appr
           onStart: () => {
             console.log("🚀 Streaming started");
             setStreamingText("");
+            setStreamPreview("");
+            setShowStreamPreview(true);
           },
           onChunk: (chunk: string) => {
             console.log("📝 Streaming chunk:", chunk);
             
-            // Add artificial delay for better typewriter effect on fast responses
+            // Update stream preview immediately for responsive feedback
+            setStreamPreview(prev => prev + chunk);
+            
+            // Add artificial delay for main translation display for better typewriter effect
             setTimeout(() => {
               setStreamingText(prev => {
                 const newText = prev + chunk;
@@ -162,6 +170,11 @@ I need you to translate the following message with cultural sensitivity and appr
             console.log("✅ Streaming complete:", fullText);
             setIsStreaming(false);
             setStreamingText(fullText);
+            
+            // Fade out stream preview after a delay
+            setTimeout(() => {
+              setShowStreamPreview(false);
+            }, 1200);
             
             // Now run structured analysis in background for complete cultural intelligence
             try {
@@ -523,10 +536,11 @@ I need you to translate the following message with cultural sensitivity and appr
             </Alert>
           )}
 
-          {/* Message Input - Always at Top */}
+          {/* Step 1: Translate */}
           <Card>
             <CardHeader className="pb-4">
-              <h2 className="text-lg font-semibold">Your Message</h2>
+              <h2 className="text-lg font-semibold">Step 1: Translate</h2>
+              <p className="text-sm text-muted-foreground">Enter your message and select target language</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -558,7 +572,7 @@ I need you to translate the following message with cultural sensitivity and appr
                   </Select>
                 </div>
                 
-                <div className="pt-6">
+                <div className="pt-6 relative">
                   <Button
                     onClick={handleTranslate}
                     disabled={!message.trim() || isTranslating}
@@ -575,15 +589,37 @@ I need you to translate the following message with cultural sensitivity and appr
                       "Translate"
                     )}
                   </Button>
+                  
+                  {/* Streaming Preview Ticker */}
+                  {showStreamPreview && (
+                    <div 
+                      className="absolute top-full left-0 mt-2 p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md shadow-sm z-10 max-w-xs"
+                      data-testid="stream-ticker"
+                    >
+                      <div className="flex items-center space-x-2 mb-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">AI Translating...</span>
+                      </div>
+                      <p className="text-sm text-blue-800 dark:text-blue-200 truncate">
+                        {streamPreview}
+                        {isStreaming && <span className="animate-pulse text-blue-500">|</span>}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Step 3: Human QC - Three Boxes Layout */}
+          {/* Step 2: Translation Results & Step 3: Safety Check */}
           {translationResult && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-center">Step 3: Human Quality Check</h2>
+              
+              {/* Step 2 Header */}
+              <div className="text-center">
+                <h2 className="text-lg font-semibold">Step 2: Translation Complete</h2>
+                <p className="text-sm text-muted-foreground">Review your translation and approve or refine as needed</p>
+              </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* AI Reasoning Box (Visible by default) */}
@@ -718,54 +754,16 @@ I need you to translate the following message with cultural sensitivity and appr
                   </CardContent>
                 </Card>
               </div>
-            </div>
-          )}
-
-          {/* Step 4: Action Box - Shows when translation is ready */}
-          {translationResult && (
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-semibold text-center">Step 4: Action</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Refine It? Section */}
-                <div className="p-4 bg-muted/30 rounded-md">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <label className="text-sm font-medium">Refine It?</label>
-                    <Textarea
-                      value={refinementFeedback}
-                      onChange={(e) => setRefinementFeedback(e.target.value)}
-                      placeholder="e.g., 'Make it more formal' or 'Add politeness markers'"
-                      className="flex-1 min-h-[60px] resize-none"
-                      data-testid="textarea-refine-feedback"
-                    />
-                    <Button
-                      onClick={handleRefine}
-                      disabled={!refinementFeedback.trim() || isRefining}
-                      variant="outline"
-                      data-testid="button-revise"
-                    >
-                      {isRefining ? 'Revising...' : 'Revise'}
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Approve & Send to ElevenLabs */}
-                <div className="flex space-x-3">
-                  <Button
-                    onClick={handleStartOver}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isGeneratingAudio}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Start Over
-                  </Button>
+              
+              {/* Primary Action Section - Centered and Immediate */}
+              <div className="space-y-4">
+                <div className="flex justify-center">
                   <Button
                     onClick={handleApprove}
-                    className="flex-1"
+                    size="lg"
+                    className="px-8 py-3 text-lg"
                     disabled={isGeneratingAudio}
-                    data-testid="button-approve"
+                    data-testid="button-approve-generate"
                   >
                     {isGeneratingAudio ? (
                       <div className="flex items-center space-x-2">
@@ -774,15 +772,69 @@ I need you to translate the following message with cultural sensitivity and appr
                       </div>
                     ) : (
                       <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Approve & Send to ElevenLabs
+                        <Check className="w-5 h-5 mr-2" />
+                        Approve & Generate Audio
                       </>
                     )}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+                
+                {/* Secondary Refine Section - Collapsible */}
+                <div className="flex justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowRefineSection(!showRefineSection)}
+                    data-testid="button-refine-toggle"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Need to refine it?
+                    <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showRefineSection ? 'rotate-180' : ''}`} />
+                  </Button>
+                </div>
+                
+                {/* Collapsible Refine Section */}
+                {showRefineSection && (
+                  <Card className="bg-muted/30">
+                    <CardContent className="pt-4">
+                      <div className="space-y-3">
+                        <Label>Tell us how to improve the translation:</Label>
+                        <Textarea
+                          value={refinementFeedback}
+                          onChange={(e) => setRefinementFeedback(e.target.value)}
+                          placeholder="e.g., 'Make it more formal' or 'Add politeness markers'"
+                          className="min-h-[80px] resize-none"
+                          data-testid="textarea-refine-feedback"
+                        />
+                        <div className="flex space-x-2">
+                          <Button
+                            onClick={handleRefine}
+                            disabled={!refinementFeedback.trim() || isRefining}
+                            data-testid="button-revise"
+                          >
+                            {isRefining ? 'Revising...' : 'Revise Translation'}
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            onClick={() => setShowRefineSection(false)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+              
+              {/* Step 3: Safety Check (Background) */}
+              <div className="text-center">
+                <h2 className="text-lg font-semibold">Step 3: Safety Check <span className="text-sm text-muted-foreground">(Background)</span></h2>
+                <p className="text-sm text-muted-foreground">Independent verification running automatically</p>
+              </div>
+            </div>
           )}
+
 
           {/* Refinement Result */}
           {refinementResult && (
