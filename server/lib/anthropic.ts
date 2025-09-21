@@ -62,21 +62,8 @@ export async function translateMessage(
   customApiKey?: string
 ): Promise<TranslationResult> {
   try {
-    // Convert dropdown values to proper language names for Claude
-    const languageMap: Record<string, string> = {
-      'spanish': 'Spanish',
-      'mandarin': 'Mandarin Chinese',
-      'japanese': 'Japanese',
-      'arabic': 'Arabic',
-      'french': 'French',
-      'portuguese': 'Portuguese',
-      'russian': 'Russian',
-      'korean': 'Korean',
-      'vietnamese': 'Vietnamese'
-    };
-    
-    const properCaseLanguage = languageMap[targetLanguage.toLowerCase()] || 
-                              targetLanguage.charAt(0).toUpperCase() + targetLanguage.slice(1).toLowerCase();
+    // Use the target language directly since frontend now passes proper labels
+    const properCaseLanguage = targetLanguage;
     
     
     let systemPrompt = customSystemPrompt;
@@ -107,7 +94,7 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
       name: "submit_translation",
       description: "Submits the culturally-aware translation and its corresponding analysis.",
       input_schema: {
-        type: "object",
+        type: "object" as const,
         properties: {
           // 1. ANALYSIS FIELDS (The "Why")
           intent: {
@@ -158,7 +145,13 @@ Analyze the user's intent, consider cultural factors, develop a translation stra
     }
 
     // The arguments are already a clean JSON object - no parsing needed!
-    const { intent, cultural_considerations, strategy, translation, cultural_notes } = toolCall.input;
+    const { intent, cultural_considerations, strategy, translation, cultural_notes } = toolCall.input as {
+      intent: string;
+      cultural_considerations: string;
+      strategy: string;
+      translation: string;
+      cultural_notes: string;
+    };
 
     // Clean and validate the response
     if (!translation || !translation.trim()) {
@@ -192,7 +185,7 @@ export async function backTranslateMessage(
       name: "submit_back_translation",
       description: "Submits the back-translation analysis and safety check results.",
       input_schema: {
-        type: "object",
+        type: "object" as const,
         properties: {
           // 1. LITERAL TRANSLATION (The "What")
           literal_translation: {
@@ -219,21 +212,8 @@ export async function backTranslateMessage(
       }
     };
 
-    // Use the same language mapping for consistency
-    const languageMap: Record<string, string> = {
-      'spanish': 'Spanish',
-      'mandarin': 'Mandarin Chinese',
-      'japanese': 'Japanese',
-      'arabic': 'Arabic',
-      'french': 'French',
-      'portuguese': 'Portuguese',
-      'russian': 'Russian',
-      'korean': 'Korean',
-      'vietnamese': 'Vietnamese'
-    };
-    
-    const properCaseLanguage = languageMap[targetLanguage.toLowerCase()] || 
-                              targetLanguage.charAt(0).toUpperCase() + targetLanguage.slice(1).toLowerCase();
+    // Use the target language directly since frontend now passes proper labels
+    const properCaseLanguage = targetLanguage;
 
     const systemPrompt = `You are a back-translation specialist. Analyze the ${properCaseLanguage} text as an independent safety check without being influenced by the original intent.
 
@@ -261,7 +241,12 @@ Provide a literal English translation, analyze the perceived tone, identify cult
     }
 
     // The arguments are already a clean JSON object - no parsing needed!
-    const { literal_translation, perceived_tone, cultural_nuance, overall_assessment } = toolCall.input;
+    const { literal_translation, perceived_tone, cultural_nuance, overall_assessment } = toolCall.input as {
+      literal_translation: string;
+      perceived_tone: string;
+      cultural_nuance: string;
+      overall_assessment: string;
+    };
 
     // Clean and validate the response
     if (!literal_translation || !literal_translation.trim()) {

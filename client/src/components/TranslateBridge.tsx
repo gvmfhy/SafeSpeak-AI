@@ -113,7 +113,11 @@ I need you to translate the following message with cultural sensitivity and appr
         customPrompt: selectedPreset.customPrompt
       } : undefined;
       
-      const result = await translateMessage(message, targetLanguage, hasEditedPrompt ? systemPrompt : undefined, presetContext, useManagedKeys ? undefined : customKeys);
+      // Get the language label instead of value for clearer communication with Claude
+      const selectedLang = languages.find(lang => lang.value === targetLanguage);
+      const languageLabel = selectedLang ? selectedLang.label : targetLanguage;
+      
+      const result = await translateMessage(message, languageLabel, hasEditedPrompt ? systemPrompt : undefined, presetContext, useManagedKeys ? undefined : customKeys);
       
       setTranslationResult(result);
       
@@ -133,7 +137,11 @@ I need you to translate the following message with cultural sensitivity and appr
     setIsBackTranslating(true);
     
     try {
-      const result = await backTranslateMessage(message, translationToUse, targetLanguage, useManagedKeys ? undefined : customKeys);
+      // Use the same language label for back-translation
+      const selectedLang = languages.find(lang => lang.value === targetLanguage);
+      const languageLabel = selectedLang ? selectedLang.label : targetLanguage;
+      
+      const result = await backTranslateMessage(message, translationToUse, languageLabel, useManagedKeys ? undefined : customKeys);
       setBackTranslationResult(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Back-translation failed');
