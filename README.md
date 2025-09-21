@@ -4,14 +4,6 @@ To this end, I found myself in a healthcare setting translating English to Manda
 
 ## Author
 Austin Morrissey
-
-## License
-MIT
-
-
-
-expanderd
-
 ```
 ┌──────────────┐
 │ Your Message │
@@ -58,3 +50,8 @@ expanderd
                           ┌──────────────────┐                  │
                           │ User: Correct?   │ ──── Yes ────> Play
                           └──────────────────┘
+
+
+
+## License
+MIT
