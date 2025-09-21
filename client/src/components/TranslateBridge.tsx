@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from "./ThemeToggle";
 import { SettingsDrawer, type RecipientPreset } from "./SettingsDrawer";
-import { translateMessage, backTranslateMessage, generateAudio } from "@/lib/api";
+import { translateMessage, backTranslateMessage, generateAudio, refineTranslation } from "@/lib/api";
 
 export function TranslateBridge() {
   // Application state - single page, no steps
@@ -25,11 +25,27 @@ export function TranslateBridge() {
   const [translationResult, setTranslationResult] = useState<{
     translation: string;
     culturalNotes: string;
+    intent?: string;
+    culturalConsiderations?: string;
+    strategy?: string;
   } | null>(null);
   
   const [backTranslationResult, setBackTranslationResult] = useState<{
     backTranslation: string;
     culturalAnalysis: string;
+    literalTranslation?: string;
+    perceivedTone?: string;
+    culturalNuance?: string;
+  } | null>(null);
+  
+  // Refinement state
+  const [isRefining, setIsRefining] = useState(false);
+  const [refinementFeedback, setRefinementFeedback] = useState("");
+  const [showRefinement, setShowRefinement] = useState(false);
+  const [refinementResult, setRefinementResult] = useState<{
+    revisedTranslation: string;
+    changesExplanation: string;
+    improvementNotes: string;
   } | null>(null);
   
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -141,6 +157,49 @@ I need you to translate the following message with cultural sensitivity and appr
     }
   };
 
+  const handleRefine = async () => {
+    if (!translationResult || !refinementFeedback.trim()) return;
+    
+    setIsRefining(true);
+    setError(null);
+    
+    try {
+      const result = await refineTranslation({
+        originalMessage: message,
+        currentTranslation: translationResult.translation,
+        targetLanguage,
+        userFeedback: refinementFeedback,
+        conversationContext: `Original analysis - Intent: ${translationResult.intent || 'N/A'}, Cultural Considerations: ${translationResult.culturalConsiderations || 'N/A'}, Strategy: ${translationResult.strategy || 'N/A'}`
+      }, useManagedKeys ? undefined : customKeys);
+      
+      setRefinementResult(result);
+      
+      // Clear feedback input
+      setRefinementFeedback("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Translation refinement failed');
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const handleUseRefinedTranslation = () => {
+    if (!refinementResult) return;
+    
+    // Update the translation result with the refined version
+    setTranslationResult(prev => prev ? {
+      ...prev,
+      translation: refinementResult.revisedTranslation
+    } : null);
+    
+    // Clear refinement state
+    setRefinementResult(null);
+    setShowRefinement(false);
+    
+    // Re-run back-translation on the refined version
+    handleBackTranslate(refinementResult.revisedTranslation);
+  };
+
   const handleStartOver = () => {
     setMessage("");
     setTranslationResult(null);
@@ -149,6 +208,9 @@ I need you to translate the following message with cultural sensitivity and appr
     setIsEditingTranslation(false);
     setError(null);
     setIsPlaying(false);
+    setShowRefinement(false);
+    setRefinementFeedback("");
+    setRefinementResult(null);
     
     // Stop any playing audio
     if (audioRef.current) {
@@ -472,10 +534,110 @@ I need you to translate the following message with cultural sensitivity and appr
                   </div>
                 )}
                 
+                {/* Enhanced Cultural Analysis */}
+                {translationResult.intent && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">Communication Intent:</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">{translationResult.intent}</p>
+                  </div>
+                )}
+                
+                {translationResult.culturalConsiderations && (
+                  <div className="p-3 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-md">
+                    <p className="text-sm font-medium text-purple-800 dark:text-purple-200 mb-1">Cultural Considerations:</p>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">{translationResult.culturalConsiderations}</p>
+                  </div>
+                )}
+                
+                {translationResult.strategy && (
+                  <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Translation Strategy:</p>
+                    <p className="text-sm text-green-700 dark:text-green-300">{translationResult.strategy}</p>
+                  </div>
+                )}
+                
                 <div className="p-3 bg-accent/30 rounded-md">
                   <p className="text-sm text-muted-foreground mb-1">Cultural Notes:</p>
                   <p className="text-sm">{translationResult.culturalNotes}</p>
                 </div>
+                
+                {/* Refinement Controls */}
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRefinement(!showRefinement)}
+                    data-testid="button-refine-translation"
+                  >
+                    <MessageSquare className="w-3 h-3 mr-1" />
+                    {showRefinement ? 'Hide Refinement' : 'Refine Translation'}
+                  </Button>
+                </div>
+                
+                {/* Refinement Panel */}
+                {showRefinement && (
+                  <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md space-y-3">
+                    <h4 className="text-sm font-medium text-orange-800 dark:text-orange-200">Provide feedback to refine the translation:</h4>
+                    <Textarea
+                      value={refinementFeedback}
+                      onChange={(e) => setRefinementFeedback(e.target.value)}
+                      placeholder="e.g., 'Make it sound warmer and more personal' or 'Use more formal language'"
+                      className="min-h-16"
+                      data-testid="textarea-refinement-feedback"
+                    />
+                    <Button
+                      onClick={handleRefine}
+                      disabled={!refinementFeedback.trim() || isRefining}
+                      size="sm"
+                      data-testid="button-submit-refinement"
+                    >
+                      {isRefining ? 'Refining...' : 'Get Refined Translation'}
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Refinement Result */}
+                {refinementResult && (
+                  <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md space-y-3">
+                    <h4 className="text-sm font-medium text-green-800 dark:text-green-200">Refined Translation:</h4>
+                    
+                    <div className="p-3 bg-white dark:bg-gray-900 border rounded-md">
+                      <p className="text-base leading-relaxed">{refinementResult.revisedTranslation}</p>
+                    </div>
+                    
+                    <div className="text-sm space-y-2">
+                      <div>
+                        <p className="font-medium text-green-800 dark:text-green-200">Changes Made:</p>
+                        <p className="text-green-700 dark:text-green-300">{refinementResult.changesExplanation}</p>
+                      </div>
+                      
+                      <div>
+                        <p className="font-medium text-green-800 dark:text-green-200">Improvement Notes:</p>
+                        <p className="text-green-700 dark:text-green-300">{refinementResult.improvementNotes}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={handleUseRefinedTranslation}
+                        size="sm"
+                        data-testid="button-use-refined"
+                      >
+                        <Check className="w-3 h-3 mr-1" />
+                        Use This Translation
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRefinementResult(null)}
+                        data-testid="button-discard-refined"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        Discard
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -509,9 +671,33 @@ I need you to translate the following message with cultural sensitivity and appr
                   </div>
                 </div>
                 
-                <div className="p-3 bg-card border border-card-border rounded-md">
-                  <p className="text-sm text-muted-foreground mb-1">Cultural Analysis:</p>
-                  <p className="text-sm">{backTranslationResult.culturalAnalysis}</p>
+                {/* Enhanced Safety Check Analysis */}
+                <div className="space-y-3">
+                  {backTranslationResult.literalTranslation && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">Literal Translation:</p>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">{backTranslationResult.literalTranslation}</p>
+                    </div>
+                  )}
+                  
+                  {backTranslationResult.perceivedTone && (
+                    <div className="p-3 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-md">
+                      <p className="text-sm font-medium text-indigo-800 dark:text-indigo-200 mb-1">Perceived Tone:</p>
+                      <p className="text-sm text-indigo-700 dark:text-indigo-300">{backTranslationResult.perceivedTone}</p>
+                    </div>
+                  )}
+                  
+                  {backTranslationResult.culturalNuance && (
+                    <div className="p-3 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800 rounded-md">
+                      <p className="text-sm font-medium text-pink-800 dark:text-pink-200 mb-1">Cultural Nuance:</p>
+                      <p className="text-sm text-pink-700 dark:text-pink-300">{backTranslationResult.culturalNuance}</p>
+                    </div>
+                  )}
+                  
+                  <div className="p-3 bg-card border border-card-border rounded-md">
+                    <p className="text-sm text-muted-foreground mb-1">Overall Assessment:</p>
+                    <p className="text-sm">{backTranslationResult.culturalAnalysis}</p>
+                  </div>
                 </div>
 
                 <div className="flex space-x-3">
