@@ -827,11 +827,6 @@ I need you to translate the following message with cultural sensitivity and appr
                 )}
               </div>
               
-              {/* Step 3: Safety Check (Background) */}
-              <div className="text-center">
-                <h2 className="text-lg font-semibold">Step 3: Safety Check <span className="text-sm text-muted-foreground">(Background)</span></h2>
-                <p className="text-sm text-muted-foreground">Independent verification running automatically</p>
-              </div>
             </div>
           )}
 

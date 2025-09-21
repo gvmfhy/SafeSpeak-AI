@@ -67,12 +67,12 @@ export async function streamTranslation(
   try {
     const properCaseLanguage = targetLanguage;
     
-    // Simple streaming prompt - just translation, no analysis
-    const streamingPrompt = `Translate the following message to ${properCaseLanguage} with cultural sensitivity and appropriate tone:
+    // Simple streaming prompt - just translation, no analysis  
+    const streamingPrompt = `Translate the following message to ${properCaseLanguage}:
 
 "${message}"
 
-Provide only the translation without any analysis or explanation.`;
+Provide only the direct translation without any analysis or explanation.`;
 
     const anthropic = getAnthropicClient(customApiKey);
     const stream = await anthropic.messages.create({
@@ -124,7 +124,7 @@ export async function translateMessage(
       const toneContext = presetContext?.tone || 'appropriate';
       const additionalContext = presetContext?.customPrompt || '';
       
-      systemPrompt = `You are a cultural translation assistant. Translate the message to ${properCaseLanguage} with cultural sensitivity.
+      systemPrompt = `You are an expert translator. Translate the message to ${properCaseLanguage} accurately while considering cultural context.
 
 Context:
 - Target Language: ${properCaseLanguage}
@@ -132,7 +132,7 @@ Context:
 - Desired Tone: ${toneContext}
 ${additionalContext ? `- Additional Context: ${additionalContext}` : ''}
 
-Analyze the user's intent, consider cultural factors, develop a translation strategy, then provide the culturally appropriate translation. Use the submit_translation tool to provide your structured response.`;
+Analyze the user's intent, consider cultural factors, develop a translation strategy, then provide an accurate translation that reflects the original meaning and tone. Use the submit_translation tool to provide your structured response.`;
     } else {
       // Replace placeholders in custom system prompt
       systemPrompt = systemPrompt.replace(/\{TARGET_LANGUAGE\}/g, targetLanguage);
