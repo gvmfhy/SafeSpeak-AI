@@ -72,6 +72,112 @@ export async function translateMessage(
   return result.data;
 }
 
+interface StreamingCallbacks {
+  onStart?: () => void;
+  onChunk?: (text: string) => void;
+  onComplete?: (fullText: string) => void;
+  onError?: (error: string) => void;
+}
+
+export async function streamTranslation(
+  message: string,
+  targetLanguage: string,
+  callbacks: StreamingCallbacks,
+  systemPrompt?: string,
+  presetContext?: {
+    tone: string;
+    culturalContext: string;
+    customPrompt?: string;
+  },
+  customKeys?: { anthropic: string; elevenlabs: string }
+): Promise<() => void> {
+  return new Promise((resolve, reject) => {
+    // Create POST request body
+    const requestBody = {
+      message,
+      targetLanguage,
+      systemPrompt,
+      presetContext,
+      customKeys,
+    };
+
+    // Use fetch to initiate the SSE stream
+    fetch('/api/translate-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      let cancelled = false;
+      const decoder = new TextDecoder();
+
+      const readStream = async () => {
+        try {
+          while (!cancelled) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  switch (data.type) {
+                    case 'start':
+                      callbacks.onStart?.();
+                      break;
+                    case 'chunk':
+                      callbacks.onChunk?.(data.text);
+                      break;
+                    case 'complete':
+                      callbacks.onComplete?.(data.fullText);
+                      return; // Exit the stream
+                    case 'error':
+                      callbacks.onError?.(data.error);
+                      return;
+                  }
+                } catch (parseError) {
+                  // Ignore malformed JSON chunks
+                }
+              }
+            }
+          }
+        } catch (error) {
+          if (!cancelled) {
+            callbacks.onError?.(error instanceof Error ? error.message : 'Stream error');
+          }
+        }
+      };
+
+      readStream();
+      
+      // Return cancellation function
+      resolve(() => {
+        cancelled = true;
+        reader.cancel();
+      });
+      
+    }).catch(error => {
+      callbacks.onError?.(error instanceof Error ? error.message : 'Request failed');
+      reject(error);
+    });
+  });
+}
+
 export async function backTranslateMessage(
   originalMessage: string,
   translation: string,

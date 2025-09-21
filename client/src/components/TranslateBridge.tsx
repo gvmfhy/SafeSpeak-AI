@@ -9,13 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeToggle } from "./ThemeToggle";
 import { SettingsDrawer, type RecipientPreset } from "./SettingsDrawer";
-import { translateMessage, backTranslateMessage, generateAudio, refineTranslation } from "@/lib/api";
+import { translateMessage, backTranslateMessage, generateAudio, refineTranslation, streamTranslation } from "@/lib/api";
 
 export function TranslateBridge() {
   // Application state - single page, no steps
   const [isTranslating, setIsTranslating] = useState(false);
   const [isBackTranslating, setIsBackTranslating] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  
+  // Streaming state
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
+  const [cancelStream, setCancelStream] = useState<(() => void) | null>(null);
 
   // Core data
   const [message, setMessage] = useState("");
@@ -107,10 +112,18 @@ I need you to translate the following message with cultural sensitivity and appr
     if (!message.trim()) return;
     
     setIsTranslating(true);
+    setIsStreaming(true);
+    setStreamingText("");
     setTranslationResult(null);
     setBackTranslationResult(null);
     setAudioUrl(null);
     setError(null);
+    
+    // Cancel any existing stream
+    if (cancelStream) {
+      cancelStream();
+      setCancelStream(null);
+    }
     
     try {
       // Get preset context if one is selected
@@ -124,15 +137,75 @@ I need you to translate the following message with cultural sensitivity and appr
       // Append the target language to the message so Claude knows exactly what language to translate to
       const messageWithLanguage = `${message} [translate to ${getLanguageLabel()}]`;
       
-      const result = await translateMessage(messageWithLanguage, getLanguageLabel(), hasEditedPrompt ? systemPrompt : undefined, presetContext, getApiKeys());
+      // Start streaming translation for immediate feedback
+      const cancel = await streamTranslation(
+        messageWithLanguage,
+        getLanguageLabel(),
+        {
+          onStart: () => {
+            console.log("🚀 Streaming started");
+            setStreamingText("");
+          },
+          onChunk: (chunk: string) => {
+            console.log("📝 Streaming chunk:", chunk);
+            
+            // Add artificial delay for better typewriter effect on fast responses
+            setTimeout(() => {
+              setStreamingText(prev => {
+                const newText = prev + chunk;
+                console.log("📄 Current streaming text:", newText);
+                return newText;
+              });
+            }, 50); // 50ms delay between chunks for visible typewriter effect
+          },
+          onComplete: async (fullText: string) => {
+            console.log("✅ Streaming complete:", fullText);
+            setIsStreaming(false);
+            setStreamingText(fullText);
+            
+            // Now run structured analysis in background for complete cultural intelligence
+            try {
+              const structuredResult = await translateMessage(messageWithLanguage, getLanguageLabel(), hasEditedPrompt ? systemPrompt : undefined, presetContext, getApiKeys());
+              
+              // Merge streaming result with structured analysis
+              setTranslationResult({
+                translation: fullText, // Use streaming result for translation
+                culturalNotes: structuredResult.culturalNotes,
+                intent: structuredResult.intent,
+                culturalConsiderations: structuredResult.culturalConsiderations,
+                strategy: structuredResult.strategy
+              });
+              
+              // Start back-translation in background
+              setTimeout(() => {
+                handleBackTranslate(fullText);
+              }, 500);
+              
+            } catch (analysisError) {
+              // If structured analysis fails, still use streaming result
+              setTranslationResult({
+                translation: fullText,
+                culturalNotes: "Analysis temporarily unavailable",
+                intent: "User intent analysis pending",
+                culturalConsiderations: "Cultural analysis pending", 
+                strategy: "Translation strategy pending"
+              });
+            }
+          },
+          onError: (error: string) => {
+            setIsStreaming(false);
+            setError(`Streaming failed: ${error}`);
+          }
+        },
+        hasEditedPrompt ? systemPrompt : undefined,
+        presetContext,
+        getApiKeys()
+      );
       
-      setTranslationResult(result);
+      setCancelStream(() => cancel);
       
-      // Start back-translation in background after brief delay for better UX
-      setTimeout(() => {
-        handleBackTranslate(result.translation);
-      }, 500);
     } catch (err) {
+      setIsStreaming(false);
       setError(err instanceof Error ? err.message : 'Translation failed');
     } finally {
       setIsTranslating(false);

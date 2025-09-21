@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { translateMessage, backTranslateMessage, refineTranslation } from "./lib/anthropic";
+import { translateMessage, backTranslateMessage, refineTranslation, streamTranslation } from "./lib/anthropic";
 import { ElevenLabsService } from "./lib/elevenlabs";
 import { z } from "zod";
 
@@ -69,6 +69,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Translation failed'
+      });
+    }
+  });
+
+  // Streaming translation endpoint
+  app.post('/api/translate-stream', async (req, res) => {
+    try {
+      const { message, targetLanguage, systemPrompt, presetContext, customKeys } = translateSchema.parse(req.body);
+      
+      // Set up Server-Sent Events headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
+
+      try {
+        // Start streaming translation
+        const streamingTranslation = await streamTranslation(message, targetLanguage, systemPrompt, presetContext, customKeys?.anthropic);
+        
+        // Send start event
+        res.write(`data: ${JSON.stringify({ type: 'start' })}\n\n`);
+        
+        let fullTranslation = '';
+        
+        // Stream translation chunks
+        for await (const chunk of streamingTranslation) {
+          fullTranslation += chunk;
+          res.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
+        }
+        
+        // Send complete event with full translation
+        res.write(`data: ${JSON.stringify({ type: 'complete', fullText: fullTranslation })}\n\n`);
+        res.end();
+        
+      } catch (streamError) {
+        res.write(`data: ${JSON.stringify({ type: 'error', error: streamError instanceof Error ? streamError.message : 'Streaming failed' })}\n\n`);
+        res.end();
+      }
+      
+    } catch (error) {
+      console.error('Streaming translation error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Streaming translation failed'
       });
     }
   });

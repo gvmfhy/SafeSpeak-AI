@@ -53,6 +53,52 @@ export interface RefinementResult {
   improvementNotes: string;
 }
 
+export async function streamTranslation(
+  message: string,
+  targetLanguage: string,
+  customSystemPrompt?: string,
+  presetContext?: {
+    tone: string;
+    culturalContext: string;
+    customPrompt?: string;
+  },
+  customApiKey?: string
+): Promise<AsyncIterable<string>> {
+  try {
+    const properCaseLanguage = targetLanguage;
+    
+    // Simple streaming prompt - just translation, no analysis
+    const streamingPrompt = `Translate the following message to ${properCaseLanguage} with cultural sensitivity and appropriate tone:
+
+"${message}"
+
+Provide only the translation without any analysis or explanation.`;
+
+    const anthropic = getAnthropicClient(customApiKey);
+    const stream = await anthropic.messages.create({
+      model: TRANSLATION_MODEL,
+      system: streamingPrompt,
+      messages: [
+        { role: 'user', content: 'Please provide the translation.' }
+      ],
+      max_tokens: 1000,
+      stream: true,
+    });
+
+    // Return async iterable that yields text chunks
+    return (async function* () {
+      for await (const chunk of stream) {
+        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+          yield chunk.delta.text;
+        }
+      }
+    })();
+  } catch (error) {
+    console.error('Streaming translation error:', error);
+    throw new Error('Failed to stream translation: ' + (error as Error).message);
+  }
+}
+
 export async function translateMessage(
   message: string,
   targetLanguage: string,
